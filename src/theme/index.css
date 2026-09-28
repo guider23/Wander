@@ -1,0 +1,237 @@
+:root {
+  --background: #F5E6D8;
+  --background-card: #FFFFFF;
+  --background-glass: rgba(255, 255, 255, 0.82);
+  --background-input: #FFFFFF;
+  --ink: #181818;
+  --ink-secondary: #5C554F;
+  --ink-muted: #9B9A97;
+  --ink-border: rgba(0, 0, 0, 0.08);
+  --ink-active: #0D0D0D;
+  --accent: #2B2623;
+  --radius-sm: 6px;
+  --radius: 12px;
+  --radius-full: 9999px;
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, Helvetica, Arial, sans-serif;
+  --shadow-dock: 0 12px 36px rgba(24, 24, 24, 0.08), 0 2px 8px rgba(24, 24, 24, 0.04);
+  --shadow-bubble: 0 8px 24px rgba(24, 24, 24, 0.12), 0 2px 6px rgba(24, 24, 24, 0.06);
+  --shadow-notion: 0 24px 64px -12px rgba(0, 0, 0, 0.18), 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+
+/* Absolute scrollbar elimination across all HTML elements and pseudo-elements */
+*, *::before, *::after, html, body, #root, div, svg, ul, ol, li, input, textarea, form, section, main, aside, nav, [role="dialog"] {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+
+::-webkit-scrollbar-thumb {
+  display: none !important;
+}
+
+::-webkit-scrollbar-track {
+  display: none !important;
+}
+
+body {
+  background-color: transparent !important;
+  color: var(--ink);
+  font-family: var(--font-family);
+  user-select: none;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background-color: transparent;
+}
+
+.app-drag {
+  -webkit-app-region: drag;
+}
+
+.app-no-drag {
+  -webkit-app-region: no-drag;
+}
+
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+  border: none;
+  background: none;
+  outline: none;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+input, textarea {
+  font-family: inherit;
+  outline: none;
+}
+
+@keyframes bubblePop {
+  0% {
+    transform: scale(0) translate(0, 0);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes notionFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98) translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes notionExpandIn {
+  from {
+    opacity: 0;
+    transform: translateX(36px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+/* Lissajous harmonic breathing float for living active cursor */
+@keyframes livingCursorFloat {
+  0% {
+    transform: translate(0px, 0px) rotate(0deg);
+  }
+  25% {
+    transform: translate(-1.2px, 1.4px) rotate(-1.2deg);
+  }
+  50% {
+    transform: translate(1.4px, -1.2px) rotate(1.0deg);
+  }
+  75% {
+    transform: translate(-1.0px, -1.0px) rotate(-0.6deg);
+  }
+  100% {
+    transform: translate(0px, 0px) rotate(0deg);
+  }
+}
+
+/* Subtle phantom ghost shade pulse for previous / active anchor */
+@keyframes ghostPulse {
+  0%, 100% {
+    opacity: 0.28;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(1.08);
+  }
+}
+
+/* Apple-inspired fluid minimize effect suctioning into the right dock notch */
+@keyframes appleGenieMinimize {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateX(0) skewY(0deg);
+    filter: blur(0px);
+  }
+  45% {
+    opacity: 0.85;
+    transform: scale(0.68, 0.82) translateX(140px) skewY(-1.8deg);
+    filter: blur(0.6px);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.04, 0.22) translateX(380px) skewY(-3.5deg);
+    filter: blur(2.5px);
+  }
+}
+
+/* Apple-inspired fluid expand effect bursting out from the right dock notch */
+@keyframes appleGenieExpand {
+  0% {
+    opacity: 0;
+    transform: scale(0.06, 0.22) translateX(340px) skewY(-2.5deg);
+    filter: blur(2.5px);
+  }
+  65% {
+    opacity: 0.96;
+    transform: scale(1.018, 0.992) translateX(-5px) skewY(0.4deg);
+    filter: blur(0px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateX(0) skewY(0deg);
+    filter: blur(0px);
+  }
+}
+
+/* Gentle vertical carousel scroll for long dock titles */
+@keyframes dockVerticalCarousel {
+  0%, 22% {
+    transform: translateY(0);
+  }
+  50%, 72% {
+    transform: translateY(var(--carousel-offset, -36px));
+  }
+  94%, 100% {
+    transform: translateY(0);
+  }
+}
+
+/* Dynamic destabilized dotted moving pattern for abandoned/dropped center line or branches */
+@keyframes destabilizedDrift {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -40;
+  }
+}
+
+@keyframes destabilizedFlicker {
+  0%, 100% {
+    opacity: 0.58;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+.wander-destabilized-edge {
+  stroke-dasharray: 4 6 !important;
+  animation: destabilizedDrift 2.2s linear infinite, destabilizedFlicker 3.2s ease-in-out infinite;
+}
+
+.wander-destabilized-edge-ghost {
+  stroke-dasharray: 2 10 !important;
+  animation: destabilizedDrift 1.6s linear infinite reverse;
+}
+
+
