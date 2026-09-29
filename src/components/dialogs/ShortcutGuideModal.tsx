@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Search, Command, BookOpen, Lightbulb, CornerDownRight } from 'lucide-react';
+import { formatShortcut } from '../../utils/platform';
 
 interface ShortcutGuideModalProps {
   isOpen: boolean;
@@ -13,20 +14,20 @@ interface ShortcutItem {
   keys: string;
 }
 
-const SHORTCUTS: ShortcutItem[] = [
+const getShortcuts = (): ShortcutItem[] => [
   { category: 'Navigation', label: 'Navigate Living Cursor', description: 'Glide the harmonic pointer (arrow pad only)', keys: '↑ ↓ ← →  /  H J K L' },
   { category: 'Navigation', label: 'Focus Navigated Node', description: 'Shift active attention to currently selected node', keys: 'Enter  or  Space' },
   { category: 'Actions', label: 'Node Action Wheel', description: 'Hold Shift to reveal radial wheel; release Shift to dismiss', keys: 'Hold Shift' },
   { category: 'Actions', label: 'Action Wheel Shortcuts', description: '[1] Step, [2] Thought, [3] Focus, [4] Done, [5] Drop, [6] Delete', keys: 'Shift + 1-6  /  Numpad' },
   { category: 'Actions', label: 'Delete Node / Branch', description: 'Instantly delete selected node and all child thoughts', keys: 'Delete  /  Backspace  /  Shift + 6' },
-  { category: 'Actions', label: 'Drop All Open Branches', description: 'Abandon all unfinished curiosity branches in 1 click', keys: 'Ctrl + Shift + D  /  Alt + D' },
-  { category: 'Capture', label: 'Capture Thought', description: 'Branch an exploratory thought without leaving focus', keys: 'T  or  Ctrl + T' },
-  { category: 'Capture', label: 'Add Sequential Step', description: 'Extend current work forward along the stem', keys: 'S  or  Ctrl + S' },
-  { category: 'Capture', label: 'Start New Main Work', description: 'Plant a new tree root and begin fresh session', keys: 'Ctrl + N' },
-  { category: 'Window', label: 'Dock to Screen Edge', description: 'Collapse into curved right-edge floating notch', keys: 'Ctrl + M' },
-  { category: 'Window', label: 'Attention History', description: 'Open timeline archive of previous trees', keys: 'Ctrl + H' },
-  { category: 'Window', label: 'Preferences', description: 'Adjust motion, time format, and data backup', keys: 'Ctrl + ,' },
-  { category: 'Window', label: 'Quit Application', description: 'Safely terminate background process and tray', keys: 'Ctrl + Q' }
+  { category: 'Actions', label: 'Drop All Open Branches', description: 'Abandon all unfinished curiosity branches in 1 click', keys: `${formatShortcut('Ctrl + Shift + D')}  /  ${formatShortcut('Alt + D')}` },
+  { category: 'Capture', label: 'Capture Thought', description: 'Branch an exploratory thought without leaving focus', keys: `T  or  ${formatShortcut('Ctrl + T')}` },
+  { category: 'Capture', label: 'Add Sequential Step', description: 'Extend current work forward along the stem', keys: `S  or  ${formatShortcut('Ctrl + S')}` },
+  { category: 'Capture', label: 'Start New Main Work', description: 'Plant a new tree root and begin fresh session', keys: formatShortcut('Ctrl + N') },
+  { category: 'Window', label: 'Dock to Screen Edge', description: 'Collapse into curved right-edge floating notch', keys: formatShortcut('Ctrl + M') },
+  { category: 'Window', label: 'Attention History', description: 'Open timeline archive of previous trees', keys: formatShortcut('Ctrl + H') },
+  { category: 'Window', label: 'Preferences', description: 'Adjust motion, time format, and data backup', keys: formatShortcut('Ctrl + ,') },
+  { category: 'Window', label: 'Quit Application', description: 'Safely terminate background process and tray', keys: formatShortcut('Ctrl + Q') }
 ];
 
 export const ShortcutGuideModal: React.FC<ShortcutGuideModalProps> = ({ isOpen, onClose }) => {
@@ -47,7 +48,8 @@ export const ShortcutGuideModal: React.FC<ShortcutGuideModalProps> = ({ isOpen, 
 
   if (!isOpen) return null;
 
-  const filteredShortcuts = SHORTCUTS.filter(
+  const shortcuts = getShortcuts();
+  const filteredShortcuts = shortcuts.filter(
     (sc) =>
       sc.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
       sc.description.toLowerCase().includes(searchQuery.toLowerCase()) ||

@@ -70,10 +70,11 @@ Wander runs silently in the background, minimizing friction through keyboard-fir
 
 ## Releases
 
-Pre-compiled Windows release binaries:
+Pre-compiled release binaries:
 
 - **Windows Installer**: `release/Attention Path Setup 1.0.0.exe` (Standalone setup binary)
-- **GitHub Releases**: Download pre-built assets from the GitHub Releases tab.
+- **macOS Package**: Apple DMG (`.dmg`) and zipped application bundle (`.zip`) available on GitHub Releases
+- **Automated Multi-OS CI/CD**: Pushing a release tag automatically builds native binaries for both Windows and macOS via GitHub Actions.
 
 ## Development
 
@@ -101,8 +102,11 @@ npm start
 # Execute unit tests
 npx vitest run tests/unit
 
-# Package Windows distribution
-npm run dist:win
+# Package Windows installer
+npm run package:win
+
+# Package macOS distribution (DMG & ZIP)
+npm run package:mac
 ```
 
 ## Architecture

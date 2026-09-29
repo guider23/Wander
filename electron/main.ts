@@ -40,6 +40,7 @@ function createWindow(): BrowserWindow {
   let normalBounds = { width: 1150, height: 820, x: 0, y: 0 };
   let autoDockEnabled = true;
 
+  const isMac = process.platform === 'darwin';
   const iconPath = path.join(__dirname, '../app-icon.png');
 
   const win = new BrowserWindow({
@@ -55,7 +56,13 @@ function createWindow(): BrowserWindow {
     autoHideMenuBar: true,
     title: 'Attention Path',
     icon: iconPath,
-    skipTaskbar: true, // Run seamlessly in background, not cluttering the taskbar
+    skipTaskbar: !isMac, // Run seamlessly in background on Windows; on macOS Dock is managed
+    ...(isMac
+      ? {
+          titleBarStyle: 'hidden' as const,
+          trafficLightPosition: { x: 16, y: 16 }
+        }
+      : {}),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -233,14 +240,23 @@ function setupSystemTray(
 ) {
   if (appTray) return;
 
-  const iconPath = path.join(__dirname, '../app-icon.png');
   let trayImage: Electron.NativeImage;
-  try {
-    const rawImage = nativeImage.createFromPath(iconPath);
-    trayImage = rawImage.resize({ width: 24, height: 24, quality: 'best' });
-  } catch (err) {
-    console.error('Failed to load tray image:', err);
-    trayImage = nativeImage.createFromPath(iconPath);
+  const isMac = process.platform === 'darwin';
+
+  if (isMac) {
+    // macOS Menu Bar Extra: Use monochrome template image for automatic Dark/Light menu bar support
+    const templatePath = path.join(__dirname, '../tray-Template.png');
+    trayImage = nativeImage.createFromPath(templatePath);
+    trayImage.setTemplateImage(true);
+  } else {
+    const iconPath = path.join(__dirname, '../app-icon.png');
+    try {
+      const rawImage = nativeImage.createFromPath(iconPath);
+      trayImage = rawImage.resize({ width: 24, height: 24, quality: 'best' });
+    } catch (err) {
+      console.error('Failed to load tray image:', err);
+      trayImage = nativeImage.createFromPath(iconPath);
+    }
   }
 
   appTray = new Tray(trayImage);
@@ -270,12 +286,15 @@ function setupSystemTray(
       {
         label: 'Start at System Login',
         type: 'checkbox',
-        checked: loginSettings.openAtLogin,
+        checked: app.isPackaged ? loginSettings.openAtLogin : false,
+        enabled: app.isPackaged,
         click: (menuItem) => {
-          app.setLoginItemSettings({
-            openAtLogin: menuItem.checked,
-            path: process.execPath
-          });
+          if (app.isPackaged) {
+            app.setLoginItemSettings({
+              openAtLogin: menuItem.checked,
+              path: process.execPath
+            });
+          }
         }
       },
       { type: 'separator' },
@@ -309,14 +328,21 @@ function setupSystemTray(
 }
 
 app.whenReady().then(() => {
-  // Ensure auto-start when system starts
-  try {
-    app.setLoginItemSettings({
-      openAtLogin: true,
-      path: process.execPath
-    });
-  } catch (e) {
-    console.warn('Could not register login item settings:', e);
+  // Ensure auto-start when system starts (for packaged production app only)
+  if (app.isPackaged) {
+    try {
+      app.setLoginItemSettings({
+        openAtLogin: true,
+        path: process.execPath
+      });
+    } catch (e) {
+      console.warn('Could not register login item settings:', e);
+    }
+  } else {
+    // In dev mode, ensure dev electron binary is never registered in Windows startup
+    try {
+      app.setLoginItemSettings({ openAtLogin: false });
+    } catch (_) {}
   }
 
   const userDataPath = app.getPath('userData');
@@ -341,7 +367,7 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
-  if (isQuitting || process.platform === 'darwin') {
+  if (isQuitting || process.platform !== 'darwin') {
     app.quit();
   }
 });

@@ -8,7 +8,10 @@
     "dist/**/*",
     "dist-electron/**/*",
     "app-icon.png",
-    "app-icon.ico"
+    "app-icon.ico",
+    "app-icon.icns",
+    "tray-Template.png",
+    "tray-Template@2x.png"
   ],
   "win": {
     "target": [
@@ -26,5 +29,41 @@
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
     "shortcutName": "Attention Path"
+  },
+  "mac": {
+    "target": [
+      {
+        "target": "dmg",
+        "arch": ["arm64", "x64"]
+      },
+      {
+        "target": "zip",
+        "arch": ["arm64", "x64"]
+      }
+    ],
+    "icon": "app-icon.icns",
+    "category": "public.app-category.productivity",
+    "darkModeSupport": true,
+    "hardenedRuntime": false,
+    "gatekeeperAssess": false
+  },
+  "dmg": {
+    "title": "Attention Path ${version}",
+    "contents": [
+      {
+        "x": 130,
+        "y": 220
+      },
+      {
+        "x": 410,
+        "y": 220,
+        "type": "link",
+        "path": "/Applications"
+      }
+    ],
+    "window": {
+      "width": 540,
+      "height": 380
+    }
   }
 }

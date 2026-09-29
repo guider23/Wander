@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, History, SlidersHorizontal, HelpCircle } from 'lucide-react';
 import { WanderLogo } from '../icons/WanderLogo';
+import { formatShortcut } from '../../utils/platform';
 
 interface MacDockProps {
   activeTitle?: string | null;
@@ -39,25 +40,25 @@ export const MacDock: React.FC<MacDockProps> = ({
     },
     {
       id: 'new',
-      label: 'New Main Work (Ctrl+N)',
+      label: `New Main Work (${formatShortcut('Ctrl+N')})`,
       icon: <Plus size={17} strokeWidth={2} />,
       action: onNewWork
     },
     {
       id: 'history',
-      label: 'Attention History (Ctrl+H)',
+      label: `Attention History (${formatShortcut('Ctrl+H')})`,
       icon: <History size={17} strokeWidth={1.75} />,
       action: onOpenHistory
     },
     {
       id: 'settings',
-      label: 'Preferences (Ctrl+,)',
+      label: `Preferences (${formatShortcut('Ctrl+,')})`,
       icon: <SlidersHorizontal size={17} strokeWidth={1.75} />,
       action: onOpenSettings
     },
     {
       id: 'guide',
-      label: 'Shortcuts Guide (Ctrl+Shift+/)',
+      label: `Shortcuts Guide (${formatShortcut('Ctrl+Shift+/')})`,
       icon: <HelpCircle size={17} strokeWidth={1.75} />,
       action: onOpenGuide
     }
