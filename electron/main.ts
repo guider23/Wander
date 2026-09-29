@@ -57,12 +57,6 @@ function createWindow(): BrowserWindow {
     title: 'Attention Path',
     icon: iconPath,
     skipTaskbar: !isMac, // Run seamlessly in background on Windows; on macOS Dock is managed
-    ...(isMac
-      ? {
-          titleBarStyle: 'hidden' as const,
-          trafficLightPosition: { x: 16, y: 16 }
-        }
-      : {}),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -70,6 +64,11 @@ function createWindow(): BrowserWindow {
       sandbox: false
     }
   });
+
+  // Explicitly hide native macOS window control buttons (red/yellow/green traffic lights)
+  if (isMac && typeof win.setWindowButtonVisibility === 'function') {
+    win.setWindowButtonVisibility(false);
+  }
 
   const devServerUrl = process.env.VITE_DEV_SERVER_URL;
   if (devServerUrl) {
@@ -90,6 +89,9 @@ function createWindow(): BrowserWindow {
   win.once('ready-to-show', () => {
     win.center();
     normalBounds = win.getBounds();
+    if (isMac && typeof win.setWindowButtonVisibility === 'function') {
+      win.setWindowButtonVisibility(false);
+    }
     win.show();
     win.focus();
 
@@ -157,6 +159,9 @@ function createWindow(): BrowserWindow {
           width: dockWidth,
           height: dockHeight
         });
+        if (isMac && typeof win.setWindowButtonVisibility === 'function') {
+          win.setWindowButtonVisibility(false);
+        }
       }, 35);
     }, 200);
   }
@@ -167,6 +172,9 @@ function createWindow(): BrowserWindow {
     isDockingInProgress = false;
     win.setAlwaysOnTop(false);
     win.setBounds(normalBounds);
+    if (isMac && typeof win.setWindowButtonVisibility === 'function') {
+      win.setWindowButtonVisibility(false);
+    }
     win.focus();
     win.webContents.send('attention:dock-changed', false);
   }
@@ -240,23 +248,17 @@ function setupSystemTray(
 ) {
   if (appTray) return;
 
-  let trayImage: Electron.NativeImage;
   const isMac = process.platform === 'darwin';
-
-  if (isMac) {
-    // macOS Menu Bar Extra: Use monochrome template image for automatic Dark/Light menu bar support
-    const templatePath = path.join(__dirname, '../tray-Template.png');
-    trayImage = nativeImage.createFromPath(templatePath);
-    trayImage.setTemplateImage(true);
-  } else {
-    const iconPath = path.join(__dirname, '../app-icon.png');
-    try {
-      const rawImage = nativeImage.createFromPath(iconPath);
-      trayImage = rawImage.resize({ width: 24, height: 24, quality: 'best' });
-    } catch (err) {
-      console.error('Failed to load tray image:', err);
-      trayImage = nativeImage.createFromPath(iconPath);
-    }
+  const iconPath = path.join(__dirname, '../app-icon.png');
+  let trayImage: Electron.NativeImage;
+  try {
+    const rawImage = nativeImage.createFromPath(iconPath);
+    // Use the exact same peach squircle icon on all platforms (Windows & macOS)
+    const iconDimension = isMac ? 22 : 24;
+    trayImage = rawImage.resize({ width: iconDimension, height: iconDimension, quality: 'best' });
+  } catch (err) {
+    console.error('Failed to load tray image:', err);
+    trayImage = nativeImage.createFromPath(iconPath);
   }
 
   appTray = new Tray(trayImage);
@@ -328,6 +330,16 @@ function setupSystemTray(
 }
 
 app.whenReady().then(() => {
+  // Set macOS dock icon to the exact same peach squircle pebble icon as Windows
+  if (process.platform === 'darwin' && app.dock) {
+    const dockIconPath = path.join(__dirname, '../app-icon.png');
+    try {
+      app.dock.setIcon(dockIconPath);
+    } catch (e) {
+      console.warn('Could not set macOS dock icon:', e);
+    }
+  }
+
   // Ensure auto-start when system starts (for packaged production app only)
   if (app.isPackaged) {
     try {
@@ -339,7 +351,6 @@ app.whenReady().then(() => {
       console.warn('Could not register login item settings:', e);
     }
   } else {
-    // In dev mode, ensure dev electron binary is never registered in Windows startup
     try {
       app.setLoginItemSettings({ openAtLogin: false });
     } catch (_) {}
