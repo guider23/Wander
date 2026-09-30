@@ -498,6 +498,51 @@ export const api = {
       }
       mockStorage.save();
       return { success: true };
+    },
+
+    reactivate: async (nodeId: string): Promise<{ success: boolean }> => {
+      if (window.attentionApp) return window.attentionApp.nodes.reactivate(nodeId);
+      const node = mockStorage.nodes.find((n) => n.id === nodeId);
+      if (node) {
+        node.status = 'ONGOING';
+        node.abandonedAt = null;
+        node.completedAt = null;
+        node.deletedAt = null;
+        node.updatedAt = new Date().toISOString();
+        const activeTree = mockStorage.trees.find((t) => t.id === node.treeId);
+        if (activeTree && (activeTree.status === 'ABANDONED' || activeTree.status === 'COMPLETED')) {
+          activeTree.status = 'ACTIVE';
+          activeTree.endedAt = null;
+          activeTree.updatedAt = new Date().toISOString();
+        }
+        const activeSession = mockStorage.getActiveSession();
+        if (activeSession) {
+          activeSession.focusNodeId = nodeId;
+          activeSession.status = 'ACTIVE';
+          activeSession.endedAt = null;
+        }
+      }
+      mockStorage.save();
+      return { success: true };
+    },
+
+    restore: async (nodeId: string): Promise<{ success: boolean }> => {
+      if (window.attentionApp) return window.attentionApp.nodes.restore(nodeId);
+      const node = mockStorage.nodes.find((n) => n.id === nodeId);
+      if (node) {
+        node.deletedAt = null;
+        const unmarkChildren = (parentId: string) => {
+          mockStorage.nodes
+            .filter((n) => n.parentNodeId === parentId)
+            .forEach((child) => {
+              child.deletedAt = null;
+              unmarkChildren(child.id);
+            });
+        };
+        unmarkChildren(nodeId);
+      }
+      mockStorage.save();
+      return { success: true };
     }
   },
 
@@ -705,6 +750,41 @@ export const api = {
         return window.attentionApp.windowControls.onDockStart(cb);
       }
       return () => {};
+    }
+  },
+
+  updater: {
+    check: async () => {
+      if (window.attentionApp?.updater) {
+        return window.attentionApp.updater.check();
+      }
+      try {
+        const res = await fetch('https://api.github.com/repos/guider23/Wander/releases/latest');
+        if (!res.ok) return { available: false, error: `GitHub API status ${res.status}` };
+        const data = await res.json();
+        return {
+          available: true,
+          tagName: data.tag_name,
+          name: data.name || data.tag_name,
+          body: data.body || '',
+          publishedAt: data.published_at,
+          htmlUrl: data.html_url,
+          assets: data.assets?.map((a: any) => ({
+            name: a.name,
+            browserDownloadUrl: a.browser_download_url,
+            size: a.size
+          })) || []
+        };
+      } catch (err: any) {
+        return { available: false, error: err.message };
+      }
+    },
+    install: async (url: string) => {
+      if (window.attentionApp?.updater) {
+        return window.attentionApp.updater.install(url);
+      }
+      window.open(url, '_blank');
+      return { success: true };
     }
   }
 };

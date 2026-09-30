@@ -45,7 +45,8 @@
     "category": "public.app-category.productivity",
     "darkModeSupport": true,
     "hardenedRuntime": false,
-    "gatekeeperAssess": false
+    "gatekeeperAssess": false,
+    "identity": null
   },
   "dmg": {
     "title": "Attention Path ${version}",

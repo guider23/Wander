@@ -868,6 +868,102 @@ export class ApplicationService {
     runTx();
   }
 
+  reactivateNode(nodeId: string): void {
+    const node = this.nodeRepo.getById(nodeId);
+    if (!node) throw new Error(`Node ${nodeId} not found`);
+
+    const now = new Date().toISOString();
+    const runTx = this.db.transaction(() => {
+      node.status = 'ONGOING';
+      node.abandonedAt = null;
+      node.completedAt = null;
+      node.deletedAt = null;
+      node.updatedAt = now;
+      this.nodeRepo.save(node);
+
+      // Reactivate tree if it was marked abandoned or completed
+      const tree = this.treeRepo.getById(node.treeId);
+      if (tree && (tree.status === 'ABANDONED' || tree.status === 'COMPLETED')) {
+        tree.status = 'ACTIVE';
+        tree.endedAt = null;
+        tree.updatedAt = now;
+        this.treeRepo.save(tree);
+      }
+
+      let activeSession = this.sessionRepo.getActive();
+      if (!activeSession || activeSession.treeId !== node.treeId) {
+        const newSessionId = uuidv4();
+        activeSession = {
+          id: newSessionId,
+          treeId: node.treeId,
+          focusNodeId: nodeId,
+          previousSessionId: activeSession ? activeSession.id : null,
+          status: 'ACTIVE',
+          startedAt: now,
+          endedAt: null,
+          createdAt: now,
+          updatedAt: now,
+          schemaVersion: 1
+        };
+      } else {
+        activeSession.status = 'ACTIVE';
+        activeSession.focusNodeId = nodeId;
+        activeSession.endedAt = null;
+        activeSession.updatedAt = now;
+      }
+      this.sessionRepo.save(activeSession);
+    });
+
+    runTx();
+  }
+
+  restoreNode(nodeId: string): void {
+    const node = this.nodeRepo.getById(nodeId);
+    if (!node) throw new Error(`Node ${nodeId} not found`);
+
+    const now = new Date().toISOString();
+    const runTx = this.db.transaction(() => {
+      const allNodes = this.nodeRepo.listByTree(node.treeId);
+      const toRestore = new Set<string>([nodeId]);
+
+      let expanded = true;
+      while (expanded) {
+        expanded = false;
+        for (const n of allNodes) {
+          if (n.parentNodeId && toRestore.has(n.parentNodeId) && !toRestore.has(n.id)) {
+            toRestore.add(n.id);
+            expanded = true;
+          }
+        }
+      }
+
+      for (const id of toRestore) {
+        const n = this.nodeRepo.getById(id);
+        if (n) {
+          n.deletedAt = null;
+          n.updatedAt = now;
+          this.nodeRepo.save(n);
+        }
+      }
+
+      const tree = this.treeRepo.getById(node.treeId);
+      if (tree && tree.deletedAt) {
+        tree.deletedAt = null;
+        tree.updatedAt = now;
+        this.treeRepo.save(tree);
+      }
+
+      const activeSession = this.sessionRepo.getActive();
+      if (activeSession && activeSession.treeId === node.treeId) {
+        activeSession.focusNodeId = nodeId;
+        activeSession.updatedAt = now;
+        this.sessionRepo.save(activeSession);
+      }
+    });
+
+    runTx();
+  }
+
   softDeleteTree(treeId: string): void {
     const tree = this.treeRepo.getById(treeId);
     if (!tree) throw new Error(`Tree ${treeId} not found`);

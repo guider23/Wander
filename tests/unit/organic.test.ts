@@ -281,4 +281,148 @@ describe('Organic Tree Layout - Anti-Overlap & Collision Avoidance', () => {
     expect(edgeT1).toBeDefined();
     expect(edgeT2).toBeDefined();
   });
+
+  it('forms a distinct branch when adding a step to a parent node that already has a step (not on the same line)', () => {
+    const rootNode: Node = {
+      id: 'root-1',
+      treeId: 't1',
+      parentNodeId: null,
+      title: 'Attention Path Project',
+      kind: 'ROOT_WORK',
+      status: 'ONGOING',
+      createdAt: '2026-09-28T10:00:00Z',
+      updatedAt: '2026-09-28T10:00:00Z',
+      completedAt: null,
+      abandonedAt: null,
+      deletedAt: null,
+      metadataJson: null,
+      schemaVersion: 1
+    };
+
+    // Primary initial step on root
+    const step1: Node = {
+      id: 'step-1',
+      treeId: 't1',
+      parentNodeId: 'root-1',
+      title: 'Initial Architecture Setup',
+      kind: 'WORK_STEP',
+      status: 'ONGOING',
+      createdAt: '2026-09-28T10:02:00Z',
+      updatedAt: '2026-09-28T10:02:00Z',
+      completedAt: null,
+      abandonedAt: null,
+      deletedAt: null,
+      metadataJson: null,
+      schemaVersion: 1
+    };
+
+    // User is on rootNode (parent node) and adds a second step
+    const step2: Node = {
+      id: 'step-2',
+      treeId: 't1',
+      parentNodeId: 'root-1',
+      title: 'Alternative Approach Step',
+      kind: 'WORK_STEP',
+      status: 'ONGOING',
+      createdAt: '2026-09-28T10:10:00Z',
+      updatedAt: '2026-09-28T10:10:00Z',
+      completedAt: null,
+      abandonedAt: null,
+      deletedAt: null,
+      metadataJson: null,
+      schemaVersion: 1
+    };
+
+    const layout = layoutOrganicTree([rootNode, step1, step2], 'step-2');
+
+    expect(layout.nodes).toHaveLength(3);
+    const pStep1 = layout.nodes.find(n => n.node.id === 'step-1')!;
+    const pStep2 = layout.nodes.find(n => n.node.id === 'step-2')!;
+
+    // Step 2 must sprout outward as a branch rather than being stacked on the same line as step 1
+    expect(pStep2.x).not.toBe(pStep1.x);
+    expect(Math.abs(pStep2.x - layout.startPoint.x)).toBeGreaterThan(40);
+
+    // Edge for step 2 must exist as an independent branch
+    const edgeStep2 = layout.edges.find(e => e.id === 'edge-step-2');
+    expect(edgeStep2).toBeDefined();
+    expect(edgeStep2?.pathD).toContain('C');
+  });
+
+  it('forms distinct fanning branches when adding multiple steps to a sub-branch parent', () => {
+    const rootNode: Node = {
+      id: 'root-1',
+      treeId: 't1',
+      parentNodeId: null,
+      title: 'Main App',
+      kind: 'ROOT_WORK',
+      status: 'ONGOING',
+      createdAt: '2026-09-28T10:00:00Z',
+      updatedAt: '2026-09-28T10:00:00Z',
+      completedAt: null,
+      abandonedAt: null,
+      deletedAt: null,
+      metadataJson: null,
+      schemaVersion: 1
+    };
+
+    const branchParent: Node = {
+      id: 'branch-parent',
+      treeId: 't1',
+      parentNodeId: 'root-1',
+      title: 'Feature Module',
+      kind: 'WORK_STEP',
+      status: 'ONGOING',
+      createdAt: '2026-09-28T10:05:00Z',
+      updatedAt: '2026-09-28T10:05:00Z',
+      completedAt: null,
+      abandonedAt: null,
+      deletedAt: null,
+      metadataJson: null,
+      schemaVersion: 1
+    };
+
+    // User adds step A to branchParent
+    const stepA: Node = {
+      id: 'step-a',
+      treeId: 't1',
+      parentNodeId: 'branch-parent',
+      title: 'Substep A',
+      kind: 'WORK_STEP',
+      status: 'ONGOING',
+      createdAt: '2026-09-28T10:08:00Z',
+      updatedAt: '2026-09-28T10:08:00Z',
+      completedAt: null,
+      abandonedAt: null,
+      deletedAt: null,
+      metadataJson: null,
+      schemaVersion: 1
+    };
+
+    // User adds step B to the same branchParent
+    const stepB: Node = {
+      id: 'step-b',
+      treeId: 't1',
+      parentNodeId: 'branch-parent',
+      title: 'Substep B',
+      kind: 'WORK_STEP',
+      status: 'ONGOING',
+      createdAt: '2026-09-28T10:12:00Z',
+      updatedAt: '2026-09-28T10:12:00Z',
+      completedAt: null,
+      abandonedAt: null,
+      deletedAt: null,
+      metadataJson: null,
+      schemaVersion: 1
+    };
+
+    const layout = layoutOrganicTree([rootNode, branchParent, stepA, stepB], 'step-b');
+
+    const pA = layout.nodes.find(n => n.node.id === 'step-a')!;
+    const pB = layout.nodes.find(n => n.node.id === 'step-b')!;
+
+    // Step A and Step B must NOT be on the same vertical or horizontal line
+    expect(pA.y).not.toBe(pB.y);
+    expect(Math.abs(pA.y - pB.y)).toBeGreaterThanOrEqual(40);
+  });
 });

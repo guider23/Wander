@@ -70,11 +70,23 @@ Wander runs silently in the background, minimizing friction through keyboard-fir
 
 ## Releases
 
-Pre-compiled release binaries:
+Pre-compiled release binaries are available under [GitHub Releases](https://github.com/guider23/Wander/releases):
 
-- **Windows Installer**: `release/Attention Path Setup 1.0.0.exe` (Standalone setup binary)
-- **macOS Package**: Apple DMG (`.dmg`) and zipped application bundle (`.zip`) available on GitHub Releases
-- **Automated Multi-OS CI/CD**: Pushing a release tag automatically builds native binaries for both Windows and macOS via GitHub Actions.
+- **Windows**: `Attention.Path.Setup.X.X.X.exe` (NSIS installer with automated replacement and update)
+- **macOS (Apple Silicon & Intel)**: `Attention.Path-X.X.X-arm64.dmg` and universal `.zip` bundles
+
+### 🍎 macOS Installation Note (Gatekeeper Fix)
+Because Attention Path is a free community open-source app and is not signed with an Apple Developer Program certificate ($99/yr), macOS Gatekeeper flags downloaded applications with:
+> *"Attention Path" is damaged and can't be opened. You should move it to the Bin.*
+
+To open the app:
+1. Drag **Attention Path.app** into your `/Applications` folder.
+2. Open Terminal and run this one-line command:
+```bash
+xattr -cr "/Applications/Attention Path.app"
+```
+3. Launch Attention Path normally! You only need to run this command once.
+*(Alternatively, right-click the app in Finder while holding `Option` and choose **Open**).*
 
 ## Development
 

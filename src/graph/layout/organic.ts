@@ -99,7 +99,7 @@ function createCascadingStepPath(
 
 export function layoutOrganicTree(
   nodes: Node[],
-  activeNodeId: string | null,
+  _activeNodeId: string | null,
   options: {
     width?: number;
     height?: number;
@@ -164,9 +164,12 @@ export function layoutOrganicTree(
   let curr = rootNode;
   while (true) {
     const children = childrenMap.get(curr.id) || [];
-    const nextTrunkNode = children.find(
-      (c) => c.kind === 'WORK_STEP' && (c.id === activeNodeId || childrenMap.get(c.id)?.some(gc => gc.id === activeNodeId))
-    ) || children.find((c) => c.kind === 'WORK_STEP');
+    const workSteps = children.filter((c) => c.kind === 'WORK_STEP');
+    workSteps.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+    // The primary work sequence forms the continuous trunk spine
+    // Any additional steps added to the same parent node branch out organically
+    const nextTrunkNode = workSteps[0];
 
     if (nextTrunkNode) {
       trunkNodes.push(nextTrunkNode);
@@ -239,13 +242,18 @@ export function layoutOrganicTree(
       // Natural Tree Growth Principle:
       // As the center tree grows upward with time, older branches formed earlier remain at lower heights.
       // New branches sprout at the current higher level near the growing tip, alternating left and right!
-      unplacedChildren.forEach((child, idx) => {
-        const isAbandoned = child.status === 'ABANDONED';
-        const side = isAbandoned ? -1 : (idx % 2 === 0 ? 1 : -1);
+      const nonTrunkChildren = allChildren.filter((c) => !positions.has(c.id) || unplacedChildren.some((u) => u.id === c.id));
+      nonTrunkChildren.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
-        const tProgress = unplacedChildren.length === 1
+      unplacedChildren.forEach((child) => {
+        const isAbandoned = child.status === 'ABANDONED';
+        const branchIdx = nonTrunkChildren.indexOf(child);
+        const totalBranches = Math.max(1, nonTrunkChildren.length);
+        const side = isAbandoned ? -1 : (branchIdx % 2 === 0 ? 1 : -1);
+
+        const tProgress = totalBranches === 1
           ? 0.50
-          : 0.28 + (idx / Math.max(1, unplacedChildren.length - 1)) * 0.58;
+          : 0.25 + (branchIdx / Math.max(1, totalBranches - 1)) * 0.60;
 
         const trunkSproutPt = getTrunkPoint(tProgress);
 
@@ -254,10 +262,10 @@ export function layoutOrganicTree(
         const timeBonus = Math.min(110, Math.sqrt(durationMs / 1000) * 3);
 
         const baseLength = 110 + timeBonus + subChildren.length * 28;
-        const lengthStagger = (idx % 3) * 24;
+        const lengthStagger = (branchIdx % 3) * 24;
         const branchLength = baseLength + lengthStagger;
 
-        let yOffset = isAbandoned ? +28 : -32;
+        let yOffset = isAbandoned ? +28 : (branchIdx % 2 === 0 ? -32 : +22);
         const sproutX = trunkSproutPt.x + branchLength * side;
         const sproutY = trunkSproutPt.y + yOffset;
 
@@ -286,17 +294,18 @@ export function layoutOrganicTree(
       const branchSide = parentPos.side || 1;
       const fanOffsets = [-36, +38, -80, +82, -124, +126];
 
-      unplacedChildren.forEach((child, idx) => {
+      unplacedChildren.forEach((child) => {
+        const childIdx = allChildren.indexOf(child);
         const isAbandoned = child.status === 'ABANDONED';
         const durationMs = getNodeDuration(child);
         const subChildren = childrenMap.get(child.id) || [];
         const timeBonus = Math.min(90, Math.sqrt(durationMs / 1000) * 2.8);
 
         const baseLength = 95 + timeBonus + subChildren.length * 24;
-        const lengthStagger = (idx % 3) * 24;
+        const lengthStagger = (childIdx % 3) * 24;
         const branchLength = baseLength + lengthStagger;
 
-        let yOffset = fanOffsets[idx % fanOffsets.length] || (-36 - idx * 42);
+        let yOffset = fanOffsets[childIdx % fanOffsets.length] || (-36 - childIdx * 42);
         if (isAbandoned) {
           yOffset = Math.abs(yOffset) + 16; // Abandoned thoughts droop downward
         }
@@ -311,11 +320,18 @@ export function layoutOrganicTree(
           isTrunk: false
         });
 
-        // Always link directly to the true parent node, forming multiple distinct branches
+        // Only cascade linearly if it is the ONE single work step child of a work step
+        // When there are multiple children on this node, each forms a distinct branching curve!
+        const isStepCascade =
+          child.kind === 'WORK_STEP' &&
+          allChildren.length === 1 &&
+          !isAbandoned &&
+          parentNode.kind === 'WORK_STEP';
+
         parentLinks.set(child.id, {
           parentId: parentNode.id,
           side: branchSide,
-          isStepCascade: child.kind === 'WORK_STEP' && unplacedChildren.length === 1 && !isAbandoned
+          isStepCascade
         });
 
         // Recursively layout sub-children of this branch

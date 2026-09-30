@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron';
+import { ipcMain, shell } from 'electron';
 import { z } from 'zod';
 import { IPC_CHANNELS } from './channels';
 import { ApplicationService } from '../application/service';
@@ -112,6 +112,52 @@ export function registerIpcHandlers(service: ApplicationService): void {
     const schema = z.object({ treeId: z.string().uuid() });
     const validated = schema.parse(payload);
     service.softDeleteTree(validated.treeId);
+    return { success: true };
+  });
+
+  ipcMain.handle(IPC_CHANNELS.REACTIVATE_NODE, async (_event, payload) => {
+    const schema = z.object({ nodeId: z.string().uuid() });
+    const validated = schema.parse(payload);
+    service.reactivateNode(validated.nodeId);
+    return { success: true };
+  });
+
+  ipcMain.handle(IPC_CHANNELS.RESTORE_NODE, async (_event, payload) => {
+    const schema = z.object({ nodeId: z.string().uuid() });
+    const validated = schema.parse(payload);
+    service.restoreNode(validated.nodeId);
+    return { success: true };
+  });
+
+  ipcMain.handle(IPC_CHANNELS.CHECK_FOR_UPDATES, async () => {
+    try {
+      const response = await fetch('https://api.github.com/repos/guider23/Wander/releases/latest', {
+        headers: { 'User-Agent': 'Attention-Path-Desktop' }
+      });
+      if (!response.ok) return { available: false, error: `GitHub API status ${response.status}` };
+      const data: any = await response.json();
+      return {
+        available: true,
+        tagName: data.tag_name,
+        name: data.name || data.tag_name,
+        body: data.body || '',
+        publishedAt: data.published_at,
+        htmlUrl: data.html_url,
+        assets: data.assets?.map((a: any) => ({
+          name: a.name,
+          browserDownloadUrl: a.browser_download_url,
+          size: a.size
+        })) || []
+      };
+    } catch (err: any) {
+      return { available: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.INSTALL_UPDATE, async (_event, payload) => {
+    const schema = z.object({ url: z.string().url() });
+    const validated = schema.parse(payload);
+    await shell.openExternal(validated.url);
     return { success: true };
   });
 

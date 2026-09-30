@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import { OrganicAttentionTree } from './components/graph/OrganicAttentionTree';
 import { MacDock } from './components/dock/MacDock';
 import { EdgeDockHandle } from './components/dock/EdgeDockHandle';
 import { NotionCommandModal, NotionInputKind } from './components/dialogs/NotionCommandModal';
 import { SpotlightModal } from './components/dialogs/SpotlightModal';
 import { ShortcutGuideModal } from './components/dialogs/ShortcutGuideModal';
+import { UndoNotification, UndoAction } from './components/common/UndoNotification';
+import { UpdateBanner } from './components/common/UpdateBanner';
+import { checkForAppUpdates, isUpdateDismissed, UpdateInfo } from './utils/updater';
 import { autocorrectSentence } from './domain/autocorrect/engine';
 import { api, ActiveContextDTO } from './api/client';
 
@@ -35,6 +39,8 @@ export const App: React.FC = () => {
   const [guideOpen, setGuideOpen] = useState(false);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [undoAction, setUndoAction] = useState<UndoAction | null>(null);
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
 
   const refreshContext = useCallback(async () => {
     try {
@@ -62,6 +68,21 @@ export const App: React.FC = () => {
       unsubChanged();
       unsubStart();
     };
+  }, []);
+
+  // Check for app updates automatically on startup (non-blocking)
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      try {
+        const info = await checkForAppUpdates();
+        if (info.isNewer && !isUpdateDismissed(info.latestVersion)) {
+          setUpdateInfo(info);
+        }
+      } catch {
+        // Silently ignore if offline
+      }
+    }, 2500);
+    return () => clearTimeout(timer);
   }, []);
 
   const showToast = (msg: string) => {
@@ -92,13 +113,33 @@ export const App: React.FC = () => {
       } else if (kind === 'thought') {
         const parentId = contextNodeId || activeContext.activeNode?.id || activeContext.activeTree?.rootNodeId;
         if (!parentId) throw new Error('No parent node selected');
-        await api.nodes.captureThought(cleanTitle, parentId);
+        const node = await api.nodes.captureThought(cleanTitle, parentId);
         showToast('Thought captured');
+        setUndoAction({
+          id: uuidv4(),
+          label: `Captured thought: "${cleanTitle}"`,
+          onUndo: async () => {
+            await api.nodes.delete(node.id);
+            showToast(`Undid thought "${cleanTitle}"`);
+            refreshContext();
+          },
+          timestamp: Date.now()
+        });
       } else if (kind === 'step') {
         const parentId = contextNodeId || activeContext.activeNode?.id || activeContext.activeTree?.rootNodeId;
         if (!parentId) throw new Error('No parent node selected');
-        await api.nodes.addStep(cleanTitle, parentId);
+        const res = await api.nodes.addStep(cleanTitle, parentId);
         showToast('Step recorded');
+        setUndoAction({
+          id: uuidv4(),
+          label: `Added step: "${cleanTitle}"`,
+          onUndo: async () => {
+            await api.nodes.delete(res.node.id);
+            showToast(`Undid step "${cleanTitle}"`);
+            refreshContext();
+          },
+          timestamp: Date.now()
+        });
       }
       setCommandModalOpen(false);
       refreshContext();
@@ -119,8 +160,19 @@ export const App: React.FC = () => {
 
   const handleComplete = async (nodeId: string) => {
     try {
+      const target = activeContext.nodes.find((n) => n.id === nodeId);
       await api.nodes.complete(nodeId);
       showToast('Path marked completed');
+      setUndoAction({
+        id: uuidv4(),
+        label: `Marked completed: "${target?.title || 'Node'}"`,
+        onUndo: async () => {
+          await api.nodes.reactivate(nodeId);
+          showToast(`Re-opened "${target?.title || 'Node'}"`);
+          refreshContext();
+        },
+        timestamp: Date.now()
+      });
       refreshContext();
     } catch (err: any) {
       showToast(err.message || 'Failed to complete path');
@@ -129,8 +181,19 @@ export const App: React.FC = () => {
 
   const handleAbandon = async (nodeId: string) => {
     try {
+      const target = activeContext.nodes.find((n) => n.id === nodeId);
       await api.nodes.abandon(nodeId);
       showToast('Path dropped / abandoned');
+      setUndoAction({
+        id: uuidv4(),
+        label: `Dropped branch: "${target?.title || 'Node'}"`,
+        onUndo: async () => {
+          await api.nodes.reactivate(nodeId);
+          showToast(`Restored branch "${target?.title || 'Node'}"`);
+          refreshContext();
+        },
+        timestamp: Date.now()
+      });
       refreshContext();
     } catch (err: any) {
       showToast(err.message || 'Failed to abandon path');
@@ -139,8 +202,19 @@ export const App: React.FC = () => {
 
   const handleDeleteNode = async (nodeId: string) => {
     try {
+      const target = activeContext.nodes.find((n) => n.id === nodeId);
       await api.nodes.delete(nodeId);
       showToast('Node deleted');
+      setUndoAction({
+        id: uuidv4(),
+        label: `Deleted node: "${target?.title || 'Node'}"`,
+        onUndo: async () => {
+          await api.nodes.restore(nodeId);
+          showToast(`Restored node "${target?.title || 'Node'}"`);
+          refreshContext();
+        },
+        timestamp: Date.now()
+      });
       refreshContext();
     } catch (err: any) {
       showToast(err.message || 'Failed to delete node');
@@ -149,9 +223,27 @@ export const App: React.FC = () => {
 
   const handleDropAllOpenBranches = async () => {
     try {
+      const activeTreeId = activeContext.activeTree?.id;
+      const rootId = activeContext.activeTree?.rootNodeId;
+      const droppedIds = activeContext.nodes
+        .filter((n) => n.treeId === activeTreeId && n.id !== rootId && n.status === 'ONGOING')
+        .map((n) => n.id);
+
       const res = await api.nodes.abandonAllOpenBranches();
       if (res.count > 0) {
         showToast(`Dropped ${res.count} uncompleted branches`);
+        setUndoAction({
+          id: uuidv4(),
+          label: `Dropped ${res.count} branches`,
+          onUndo: async () => {
+            for (const id of droppedIds) {
+              await api.nodes.reactivate(id);
+            }
+            showToast(`Restored ${droppedIds.length} branches`);
+            refreshContext();
+          },
+          timestamp: Date.now()
+        });
       } else {
         showToast('No uncompleted branches to drop');
       }
@@ -187,6 +279,17 @@ export const App: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       const isInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+
+      // Ctrl + Z / Cmd + Z: Undo last action
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
+        if (!isInput && undoAction) {
+          e.preventDefault();
+          const toUndo = undoAction;
+          setUndoAction(null);
+          toUndo.onUndo();
+          return;
+        }
+      }
 
       // Ctrl + M: Toggle dock to edge
       if ((e.ctrlKey || e.metaKey) && (e.key === 'm' || e.key === 'M')) {
@@ -274,7 +377,7 @@ export const App: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [commandModalOpen, spotlightOpen, guideOpen, activeContext, isDocked, navigatedNodeId]);
+  }, [commandModalOpen, spotlightOpen, guideOpen, activeContext, isDocked, navigatedNodeId, undoAction]);
 
   const activeRootNode = activeContext.nodes.find(
     (n) => n.id === activeContext.activeTree?.rootNodeId
@@ -434,6 +537,22 @@ export const App: React.FC = () => {
         >
           {toastMessage}
         </div>
+      )}
+
+      {/* 10s Minimal Auto-Hiding Undo Notification */}
+      {undoAction && (
+        <UndoNotification
+          action={undoAction}
+          onDismiss={() => setUndoAction(null)}
+        />
+      )}
+
+      {/* Minimal App Update Banner */}
+      {updateInfo && (
+        <UpdateBanner
+          update={updateInfo}
+          onDismiss={() => setUpdateInfo(null)}
+        />
       )}
     </div>
   );

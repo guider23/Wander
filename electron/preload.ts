@@ -27,7 +27,15 @@ export const attentionAppApi = {
     rename: (nodeId: string, newTitle: string) =>
       ipcRenderer.invoke(IPC_CHANNELS.RENAME_NODE, { nodeId, newTitle }),
     delete: (nodeId: string) =>
-      ipcRenderer.invoke(IPC_CHANNELS.DELETE_NODE, { nodeId })
+      ipcRenderer.invoke(IPC_CHANNELS.DELETE_NODE, { nodeId }),
+    reactivate: (nodeId: string) =>
+      ipcRenderer.invoke(IPC_CHANNELS.REACTIVATE_NODE, { nodeId }),
+    restore: (nodeId: string) =>
+      ipcRenderer.invoke(IPC_CHANNELS.RESTORE_NODE, { nodeId })
+  },
+  updater: {
+    check: () => ipcRenderer.invoke(IPC_CHANNELS.CHECK_FOR_UPDATES),
+    install: (url: string) => ipcRenderer.invoke(IPC_CHANNELS.INSTALL_UPDATE, { url })
   },
   trees: {
     delete: (treeId: string) =>

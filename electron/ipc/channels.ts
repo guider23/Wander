@@ -24,5 +24,9 @@ export const IPC_CHANNELS = {
   WINDOW_EXPAND: 'attention:window-expand',
   WINDOW_CLOSE: 'attention:window-close',
   WINDOW_MINIMIZE: 'attention:window-minimize',
-  ABANDON_ALL_OPEN_BRANCHES: 'attention:abandon-all-open-branches'
+  ABANDON_ALL_OPEN_BRANCHES: 'attention:abandon-all-open-branches',
+  REACTIVATE_NODE: 'attention:reactivate-node',
+  RESTORE_NODE: 'attention:restore-node',
+  CHECK_FOR_UPDATES: 'attention:check-for-updates',
+  INSTALL_UPDATE: 'attention:install-update'
 } as const;

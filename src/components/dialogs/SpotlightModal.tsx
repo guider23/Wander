@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { History, SlidersHorizontal, Search, ArrowUpRight, Download, X, Trash2 } from 'lucide-react';
 import { api, HistoryItemDTO } from '../../api/client';
 import { AppSettings } from '../../domain/entities/types';
+import { checkForAppUpdates, CURRENT_APP_VERSION } from '../../utils/updater';
 
 interface SpotlightModalProps {
   isOpen: boolean;
@@ -29,6 +30,8 @@ export const SpotlightModal: React.FC<SpotlightModalProps> = ({
     reducedMotion: false,
     highContrast: false
   });
+  const [updateStatus, setUpdateStatus] = useState<string | null>(null);
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -490,6 +493,54 @@ export const SpotlightModal: React.FC<SpotlightModalProps> = ({
                   onChange={(e) => handleUpdateSettings({ highContrast: e.target.checked })}
                   style={{ width: '16px', height: '16px', accentColor: '#1A1A1A', cursor: 'pointer' }}
                 />
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '8px 0',
+                  borderBottom: '1px solid rgba(0, 0, 0, 0.05)'
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 550, color: '#1A1A1A' }}>App Updates</div>
+                  <div style={{ fontSize: '11px', color: '#9B9A97' }}>
+                    Attention Path v{CURRENT_APP_VERSION} {updateStatus && `• ${updateStatus}`}
+                  </div>
+                </div>
+                <button
+                  onClick={async () => {
+                    setIsCheckingUpdate(true);
+                    setUpdateStatus('Checking GitHub...');
+                    try {
+                      const res = await checkForAppUpdates();
+                      if (res.isNewer) {
+                        setUpdateStatus(`v${res.latestVersion} available!`);
+                      } else {
+                        setUpdateStatus('Up to date');
+                      }
+                    } catch {
+                      setUpdateStatus('Check failed');
+                    } finally {
+                      setIsCheckingUpdate(false);
+                    }
+                  }}
+                  disabled={isCheckingUpdate}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(0, 0, 0, 0.12)',
+                    backgroundColor: '#FFFFFF',
+                    color: '#1A1A1A',
+                    fontSize: '11.5px',
+                    fontWeight: 500,
+                    cursor: isCheckingUpdate ? 'wait' : 'pointer'
+                  }}
+                >
+                  {isCheckingUpdate ? 'Checking...' : 'Check for Updates'}
+                </button>
               </div>
 
               <div style={{ paddingTop: '10px', display: 'flex', gap: '8px' }}>

@@ -90,75 +90,92 @@ export const MacDock: React.FC<MacDockProps> = ({
         const isHovered = hoveredId === item.id;
 
         return (
-          <div key={item.id} style={{ position: 'relative' }}>
-            {/* Tooltip Pill */}
-            {isHovered && (
-              <div
-                style={{
-                  position: 'absolute',
-                  bottom: '48px',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  backgroundColor: 'rgba(24, 24, 24, 0.92)',
-                  color: '#F5E6D8',
-                  fontSize: '11px',
-                  fontWeight: 500,
-                  padding: '4px 10px',
-                  borderRadius: '8px',
-                  whiteSpace: 'nowrap',
-                  pointerEvents: 'none',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12)',
-                  letterSpacing: '0.01em',
-                  animation: 'notionFadeIn 120ms ease-out'
-                }}
-              >
-                {item.label}
-              </div>
-            )}
-
-            {/* Dock Icon Button */}
-            <button
-              onClick={item.isNonClickable ? undefined : item.action}
-              onMouseEnter={() => setHoveredId(item.id)}
-              onMouseLeave={() => setHoveredId(null)}
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '10px',
-                backgroundColor: !item.isNonClickable && isHovered ? 'rgba(24, 24, 24, 0.08)' : 'transparent',
-                color: '#181818',
-                border: 'none',
-                outline: 'none',
-                cursor: item.isNonClickable ? 'default' : 'pointer',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transform: item.isNonClickable
-                  ? 'none'
-                  : `scale(${isHovered ? 1.2 : 1}) translateY(${isHovered ? -3 : 0}px)`,
-                transition: 'transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1), background-color 140ms ease',
-                position: 'relative'
-              }}
-              aria-label={item.label}
-            >
-              {item.icon}
-
-              {/* Running indicator dot */}
-              {item.active && (
-                <span
+          <React.Fragment key={item.id}>
+            <div style={{ position: 'relative' }}>
+              {/* Tooltip Pill */}
+              {isHovered && (
+                <div
                   style={{
                     position: 'absolute',
-                    bottom: '2px',
-                    width: '3px',
-                    height: '3px',
-                    borderRadius: '50%',
-                    backgroundColor: '#181818'
+                    bottom: '48px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    backgroundColor: 'rgba(24, 24, 24, 0.92)',
+                    color: '#F5E6D8',
+                    fontSize: '11px',
+                    fontWeight: 500,
+                    padding: '4px 10px',
+                    borderRadius: '8px',
+                    whiteSpace: 'nowrap',
+                    pointerEvents: 'none',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12)',
+                    letterSpacing: '0.01em',
+                    animation: 'notionFadeIn 120ms ease-out'
                   }}
-                />
+                >
+                  {item.label}
+                </div>
               )}
-            </button>
-          </div>
+
+              {/* Dock Icon Button */}
+              <button
+                onClick={item.isNonClickable ? undefined : item.action}
+                onMouseEnter={() => setHoveredId(item.id)}
+                onMouseLeave={() => setHoveredId(null)}
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  backgroundColor: !item.isNonClickable && isHovered ? 'rgba(24, 24, 24, 0.08)' : 'transparent',
+                  color: '#181818',
+                  border: 'none',
+                  outline: 'none',
+                  cursor: item.isNonClickable ? 'default' : 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transform: item.isNonClickable
+                    ? 'none'
+                    : `scale(${isHovered ? 1.2 : 1}) translateY(${isHovered ? -3 : 0}px)`,
+                  transition: 'transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1), background-color 140ms ease',
+                  position: 'relative'
+                }}
+                aria-label={item.label}
+              >
+                {item.icon}
+
+                {/* Running indicator dot */}
+                {item.active && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      bottom: '2px',
+                      width: '3px',
+                      height: '3px',
+                      borderRadius: '50%',
+                      backgroundColor: '#181818'
+                    }}
+                  />
+                )}
+              </button>
+            </div>
+
+            {/* Subtle peach separator line differentiating the brand icon from active working menu */}
+            {item.isNonClickable && (
+              <div
+                style={{
+                  width: '1px',
+                  height: '18px',
+                  backgroundColor: 'rgba(180, 140, 115, 0.45)',
+                  margin: '0 4px',
+                  borderRadius: '1px',
+                  alignSelf: 'center'
+                }}
+                aria-hidden="true"
+              />
+            )}
+          </React.Fragment>
         );
       })}
     </div>
