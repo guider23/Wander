@@ -75,7 +75,7 @@ Pre-compiled release binaries are available under [GitHub Releases](https://gith
 - **Windows**: `Attention.Path.Setup.X.X.X.exe` (NSIS installer with automated replacement and update)
 - **macOS (Apple Silicon & Intel)**: `Attention.Path-X.X.X-arm64.dmg` and universal `.zip` bundles
 
-### 🍎 macOS Installation Note (Gatekeeper Fix)
+### macOS Installation Note (Gatekeeper Fix)
 Because Attention Path is a free community open-source app and is not signed with an Apple Developer Program certificate ($99/yr), macOS Gatekeeper flags downloaded applications with:
 > *"Attention Path" is damaged and can't be opened. You should move it to the Bin.*
 
