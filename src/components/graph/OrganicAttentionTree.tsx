@@ -13,6 +13,7 @@ interface OrganicAttentionTreeProps {
   onDeleteNode: (nodeId: string) => void;
   onStartNewWork: () => void;
   onNavigatedNodeChange?: (nodeId: string | null) => void;
+  expandTrigger?: number;  // Increment to trigger centering on dock expand
 }
 
 export const OrganicAttentionTree: React.FC<OrganicAttentionTreeProps> = ({
@@ -24,7 +25,8 @@ export const OrganicAttentionTree: React.FC<OrganicAttentionTreeProps> = ({
   onAbandon,
   onDeleteNode,
   onStartNewWork,
-  onNavigatedNodeChange
+  onNavigatedNodeChange,
+  expandTrigger
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [radialNode, setRadialNode] = useState<{ node: Node; x: number; y: number; fromShift?: boolean } | null>(null);
@@ -69,6 +71,28 @@ export const OrganicAttentionTree: React.FC<OrganicAttentionTreeProps> = ({
       setPanOffset({ x: idealX, y: idealY });
     }
   }, [activeTreeId, activeNodeId]);
+
+  // Center focused node when expanding from dock
+  useEffect(() => {
+    if (!expandTrigger || !containerRef.current || layout.nodes.length === 0) return;
+    
+    // Center on active, navigated, or first node
+    const targetId = navigatedNodeId || activeNodeId || layout.nodes[0]?.node.id;
+    const targetPoint = layout.nodes.find((n) => n.node.id === targetId) || layout.nodes[0];
+    
+    if (targetPoint) {
+      // Add small delay to allow window expand animation to complete
+      setTimeout(() => {
+        if (!containerRef.current) return;
+        const rect = containerRef.current.getBoundingClientRect();
+        const viewportWidth = rect.width > 200 ? rect.width : (window.innerWidth || 1150);
+        const viewportHeight = rect.height > 200 ? rect.height : (window.innerHeight || 820);
+        const idealX = Math.round(viewportWidth / 2 - targetPoint.x);
+        const idealY = Math.round(viewportHeight / 2 - targetPoint.y);
+        setPanOffset({ x: idealX, y: idealY });
+      }, 350); // Wait for window expand animation
+    }
+  }, [expandTrigger, navigatedNodeId, activeNodeId, layout.nodes]);
 
   // Spatial & Tree Keyboard Navigation Engine
   useEffect(() => {

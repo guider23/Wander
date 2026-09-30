@@ -26,6 +26,7 @@ export const App: React.FC = () => {
   const [isDocked, setIsDocked] = useState(false);
   const [isCollapsing, setIsCollapsing] = useState(false);
   const [navigatedNodeId, setNavigatedNodeId] = useState<string | null>(null);
+  const [expandTrigger, setExpandTrigger] = useState(0);  // Increment to trigger centering on expand
 
   // Modal & Dock state
   const [commandModalOpen, setCommandModalOpen] = useState(false);
@@ -60,6 +61,10 @@ export const App: React.FC = () => {
     const unsubChanged = api.window.onDockChanged((docked) => {
       setIsDocked(docked);
       setIsCollapsing(false);
+      // When expanding from dock, trigger node centering
+      if (!docked) {
+        setExpandTrigger(prev => prev + 1);
+      }
     });
     const unsubStart = api.window.onDockStart(() => {
       setIsCollapsing(true);
@@ -475,6 +480,7 @@ export const App: React.FC = () => {
         onDeleteNode={handleDeleteNode}
         onStartNewWork={() => handleOpenCommand('work')}
         onNavigatedNodeChange={setNavigatedNodeId}
+        expandTrigger={expandTrigger}
       />
 
       {/* Floating macOS-Style Dock at the Bottom */}

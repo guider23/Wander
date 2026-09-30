@@ -79,6 +79,7 @@ export const EdgeDockHandle: React.FC<EdgeDockHandleProps> = ({ onExpand, active
           width: `${tabWidth}px`,
           height: `${tabHeight}px`,
           marginRight: '2px',
+          animation: 'edgeDockSlideIn 380ms cubic-bezier(0.16, 1, 0.3, 1) both',
           transform: isPressed
             ? 'translateX(-2px) scale(0.96)'
             : isHovered

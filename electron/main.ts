@@ -38,7 +38,7 @@ function createWindow(): BrowserWindow {
   let isDocked = false;
   let isDockingInProgress = false;
   let normalBounds = { width: 1150, height: 820, x: 0, y: 0 };
-  let autoDockEnabled = false;
+  let autoDockEnabled = true;  // Enable auto-dock by default
 
   const isMac = process.platform === 'darwin';
   const iconPath = path.join(__dirname, '../app-icon.png');
@@ -53,10 +53,11 @@ function createWindow(): BrowserWindow {
     backgroundColor: '#00000000',
     hasShadow: true,
     show: false,
+    alwaysOnTop: true,  // Keep window above all other apps
     autoHideMenuBar: true,
     title: 'Attention Path',
     icon: iconPath,
-    skipTaskbar: false,
+    skipTaskbar: !isMac,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -86,14 +87,27 @@ function createWindow(): BrowserWindow {
     console.error('Failed to load page:', code, desc);
   });
 
+  win.webContents.on('did-finish-load', () => {
+    console.log('✓ Page finished loading');
+  });
+
   win.once('ready-to-show', () => {
+    console.log('✓ ready-to-show event fired');
     win.center();
     normalBounds = win.getBounds();
+    console.log('✓ Window bounds:', normalBounds);
     if (isMac && typeof win.setWindowButtonVisibility === 'function') {
       win.setWindowButtonVisibility(false);
     }
+    console.log('✓ Calling win.show()');
     win.show();
+    console.log('✓ Calling win.focus()');
     win.focus();
+    console.log('✓ Window visible:', win.isVisible(), 'minimized:', win.isMinimized());
+    
+    // Force window to front
+    win.setAlwaysOnTop(true);
+    win.setAlwaysOnTop(false);
 
     if (process.env.SCREENSHOT_MODE === '1') {
       autoDockEnabled = false;
@@ -158,6 +172,9 @@ function createWindow(): BrowserWindow {
         isDocked = true;
         isDockingInProgress = false;
         win.setAlwaysOnTop(true, 'floating');
+        win.setMovable(false);  // Lock dock position - prevent dragging
+        win.setResizable(false);  // Prevent resizing
+        win.setBackgroundColor('#00000000');  // Ensure transparent background
         win.setBounds({
           x: targetX,
           y: targetY,
@@ -175,7 +192,9 @@ function createWindow(): BrowserWindow {
     if (!win || win.isDestroyed()) return;
     isDocked = false;
     isDockingInProgress = false;
-    win.setAlwaysOnTop(false);
+    win.setAlwaysOnTop(true);  // Keep on top even when expanded
+    win.setMovable(true);  // Allow moving when expanded
+    win.setResizable(true);  // Allow resizing when expanded
 
     const targetBounds = (normalBounds.width > 400 && normalBounds.height > 400)
       ? normalBounds
@@ -189,11 +208,11 @@ function createWindow(): BrowserWindow {
     win.webContents.send('attention:dock-changed', false);
   }
 
-  // Intercept window close to keep running in background taskbar/tray unless quitting
+  // Intercept window close to keep running in background by docking to edge
   win.on('close', (e) => {
     if (!isQuitting) {
       e.preventDefault();
-      win.minimize();
+      dockToEdge();
     }
   });
 
@@ -222,6 +241,31 @@ function createWindow(): BrowserWindow {
   ipcMain.handle('attention:toggle-auto-dock', (_e, enabled: boolean) => {
     autoDockEnabled = enabled;
     return autoDockEnabled;
+  });
+
+  // Auto-dock when clicking outside the window (blur event)
+  let blurTimeout: NodeJS.Timeout | null = null;
+  win.on('blur', () => {
+    console.log('Window blur event fired. autoDockEnabled:', autoDockEnabled, 'isDocked:', isDocked, 'isDockingInProgress:', isDockingInProgress);
+    
+    // Clear any existing timeout
+    if (blurTimeout) clearTimeout(blurTimeout);
+    
+    // Use a small delay to ensure the blur is intentional (not just a brief focus change)
+    blurTimeout = setTimeout(() => {
+      if (autoDockEnabled && !isDocked && !isDockingInProgress) {
+        console.log('Auto-docking to edge...');
+        dockToEdge();
+      }
+    }, 100);
+  });
+
+  // Cancel auto-dock if window regains focus quickly
+  win.on('focus', () => {
+    if (blurTimeout) {
+      clearTimeout(blurTimeout);
+      blurTimeout = null;
+    }
   });
 
   win.on('closed', () => {

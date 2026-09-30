@@ -47,6 +47,8 @@ export const SpotlightModal: React.FC<SpotlightModalProps> = ({
     totalMB: '0'
   });
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     if (isOpen) {
       setTab(initialTab);
@@ -107,8 +109,6 @@ export const SpotlightModal: React.FC<SpotlightModalProps> = ({
     URL.revokeObjectURL(url);
     showToast('Export downloaded');
   };
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImportClick = () => {
     fileInputRef.current?.click();
@@ -614,20 +614,38 @@ export const SpotlightModal: React.FC<SpotlightModalProps> = ({
 
                     <button
                       onClick={async () => {
-                        setIsCheckingUpdate(true);
-                        setUpdateStatus('Checking GitHub...');
-                        try {
-                          const res = await checkForAppUpdates();
-                          setUpdateInfo(res);
-                          if (res.isNewer) {
-                            setUpdateStatus(`v${res.latestVersion} available!`);
-                          } else {
-                            setUpdateStatus('Up to date');
+                        // If update is available, trigger download
+                        if (updateInfo?.isNewer && updateInfo?.downloadUrl) {
+                          setUpdateStatus('Starting download...');
+                          try {
+                            await api.updater.startDownload(updateInfo.downloadUrl);
+                          } catch (err: any) {
+                            setUpdateStatus('Download failed');
+                            setDownloadProgress({
+                              stage: 'error',
+                              percent: 0,
+                              transferredMB: '0',
+                              totalMB: '0',
+                              error: err.message || 'Download failed'
+                            });
                           }
-                        } catch {
-                          setUpdateStatus('Check failed');
-                        } finally {
-                          setIsCheckingUpdate(false);
+                        } else {
+                          // Check for updates
+                          setIsCheckingUpdate(true);
+                          setUpdateStatus('Checking GitHub...');
+                          try {
+                            const res = await checkForAppUpdates();
+                            setUpdateInfo(res);
+                            if (res.isNewer) {
+                              setUpdateStatus(`v${res.latestVersion} available!`);
+                            } else {
+                              setUpdateStatus('Up to date');
+                            }
+                          } catch {
+                            setUpdateStatus('Check failed');
+                          } finally {
+                            setIsCheckingUpdate(false);
+                          }
                         }
                       }}
                       disabled={isCheckingUpdate || downloadProgress.stage === 'downloading'}
@@ -635,14 +653,14 @@ export const SpotlightModal: React.FC<SpotlightModalProps> = ({
                         padding: '4px 10px',
                         borderRadius: '6px',
                         border: '1px solid rgba(0, 0, 0, 0.12)',
-                        backgroundColor: '#FFFFFF',
-                        color: '#1A1A1A',
+                        backgroundColor: updateInfo?.isNewer ? '#181818' : '#FFFFFF',
+                        color: updateInfo?.isNewer ? '#F5E6D8' : '#1A1A1A',
                         fontSize: '11.5px',
-                        fontWeight: 500,
+                        fontWeight: updateInfo?.isNewer ? 600 : 500,
                         cursor: isCheckingUpdate ? 'wait' : 'pointer'
                       }}
                     >
-                      {isCheckingUpdate ? 'Checking...' : updateInfo?.isNewer ? 'Re-check' : 'Check for Updates'}
+                      {isCheckingUpdate ? 'Checking...' : updateInfo?.isNewer ? 'Update Now' : 'Check for Updates'}
                     </button>
                   </div>
                 </div>
