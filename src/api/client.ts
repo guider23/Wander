@@ -42,32 +42,36 @@ class MockAttentionStorage {
   };
 
   constructor() {
-    const saved = localStorage.getItem('attention_path_mock_db');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        this.trees = parsed.trees || [];
-        this.sessions = parsed.sessions || [];
-        this.nodes = parsed.nodes || [];
-        this.events = parsed.events || [];
-        this.settings = parsed.settings || this.settings;
-      } catch {
-        // ignore
+    if (typeof localStorage !== 'undefined') {
+      const saved = localStorage.getItem('attention_path_mock_db');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          this.trees = parsed.trees || [];
+          this.sessions = parsed.sessions || [];
+          this.nodes = parsed.nodes || [];
+          this.events = parsed.events || [];
+          this.settings = parsed.settings || this.settings;
+        } catch {
+          // ignore
+        }
       }
     }
   }
 
   save() {
-    localStorage.setItem(
-      'attention_path_mock_db',
-      JSON.stringify({
-        trees: this.trees,
-        sessions: this.sessions,
-        nodes: this.nodes,
-        events: this.events,
-        settings: this.settings
-      })
-    );
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(
+        'attention_path_mock_db',
+        JSON.stringify({
+          trees: this.trees,
+          sessions: this.sessions,
+          nodes: this.nodes,
+          events: this.events,
+          settings: this.settings
+        })
+      );
+    }
   }
 
   getActiveTree(): Tree | null {
@@ -754,37 +758,57 @@ export const api = {
   },
 
   updater: {
+    getVersion: async (): Promise<string> => {
+      if (window.attentionApp?.updater?.getVersion) {
+        return window.attentionApp.updater.getVersion();
+      }
+      return '1.0.2';
+    },
     check: async () => {
-      if (window.attentionApp?.updater) {
+      if (window.attentionApp?.updater?.check) {
         return window.attentionApp.updater.check();
       }
       try {
         const res = await fetch('https://api.github.com/repos/guider23/Wander/releases/latest');
-        if (!res.ok) return { available: false, error: `GitHub API status ${res.status}` };
+        if (!res.ok) return { stage: 'error', currentVersion: '1.0.2', error: `GitHub API status ${res.status}` };
         const data = await res.json();
         return {
-          available: true,
-          tagName: data.tag_name,
-          name: data.name || data.tag_name,
-          body: data.body || '',
-          publishedAt: data.published_at,
-          htmlUrl: data.html_url,
-          assets: data.assets?.map((a: any) => ({
-            name: a.name,
-            browserDownloadUrl: a.browser_download_url,
-            size: a.size
-          })) || []
+          stage: 'available',
+          currentVersion: '1.0.2',
+          latestVersion: data.tag_name,
+          releaseName: data.name || data.tag_name,
+          releaseNotes: data.body || '',
+          releaseUrl: data.html_url
         };
       } catch (err: any) {
-        return { available: false, error: err.message };
+        return { stage: 'error', currentVersion: '1.0.2', error: err.message };
       }
     },
-    install: async (url: string) => {
-      if (window.attentionApp?.updater) {
+    startDownload: async (url?: string): Promise<string> => {
+      if (window.attentionApp?.updater?.startDownload) {
+        return window.attentionApp.updater.startDownload(url);
+      }
+      if (url) window.open(url, '_blank');
+      return '';
+    },
+    getStatus: async () => {
+      if (window.attentionApp?.updater?.getStatus) {
+        return window.attentionApp.updater.getStatus();
+      }
+      return { stage: 'idle', currentVersion: '1.0.2' };
+    },
+    install: async (url?: string) => {
+      if (window.attentionApp?.updater?.install) {
         return window.attentionApp.updater.install(url);
       }
-      window.open(url, '_blank');
+      if (url) window.open(url, '_blank');
       return { success: true };
+    },
+    onProgress: (callback: (status: any) => void) => {
+      if (window.attentionApp?.updater?.onProgress) {
+        return window.attentionApp.updater.onProgress(callback);
+      }
+      return () => {};
     }
   }
 };

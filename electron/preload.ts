@@ -34,8 +34,16 @@ export const attentionAppApi = {
       ipcRenderer.invoke(IPC_CHANNELS.RESTORE_NODE, { nodeId })
   },
   updater: {
+    getVersion: () => ipcRenderer.invoke(IPC_CHANNELS.GET_APP_VERSION),
     check: () => ipcRenderer.invoke(IPC_CHANNELS.CHECK_FOR_UPDATES),
-    install: (url: string) => ipcRenderer.invoke(IPC_CHANNELS.INSTALL_UPDATE, { url })
+    startDownload: (url?: string) => ipcRenderer.invoke(IPC_CHANNELS.START_UPDATE_DOWNLOAD, { url }),
+    getStatus: () => ipcRenderer.invoke(IPC_CHANNELS.GET_UPDATE_STATUS),
+    install: (url?: string) => ipcRenderer.invoke(IPC_CHANNELS.INSTALL_UPDATE, { url }),
+    onProgress: (callback: (status: any) => void) => {
+      const listener = (_e: any, status: any) => callback(status);
+      ipcRenderer.on('attention:update-progress', listener);
+      return () => ipcRenderer.removeListener('attention:update-progress', listener);
+    }
   },
   trees: {
     delete: (treeId: string) =>

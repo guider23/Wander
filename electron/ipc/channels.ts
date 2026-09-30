@@ -27,6 +27,10 @@ export const IPC_CHANNELS = {
   ABANDON_ALL_OPEN_BRANCHES: 'attention:abandon-all-open-branches',
   REACTIVATE_NODE: 'attention:reactivate-node',
   RESTORE_NODE: 'attention:restore-node',
+  GET_APP_VERSION: 'attention:get-app-version',
   CHECK_FOR_UPDATES: 'attention:check-for-updates',
-  INSTALL_UPDATE: 'attention:install-update'
+  START_UPDATE_DOWNLOAD: 'attention:start-update-download',
+  GET_UPDATE_STATUS: 'attention:get-update-status',
+  INSTALL_UPDATE: 'attention:install-update',
+  UPDATE_PROGRESS: 'attention:update-progress'
 } as const;

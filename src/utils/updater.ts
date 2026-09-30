@@ -1,3 +1,5 @@
+import { api } from '../api/client';
+
 export interface ReleaseAsset {
   name: string;
   browserDownloadUrl: string;
@@ -13,15 +15,24 @@ export interface UpdateInfo {
   releaseNotes: string;
   publishedAt: string;
   releaseUrl: string;
+  assetName?: string;
   downloadUrl?: string;
+  totalBytes?: number;
   error?: string;
 }
 
-export const CURRENT_APP_VERSION = '1.0.2';
-const DISMISSED_KEY = 'wander_dismissed_update_version';
+export const FALLBACK_APP_VERSION = '1.0.3';
+const DISMISSED_SESSION_KEY = 'wander_dismissed_update_version';
+
+// Clear legacy permanent localStorage dismissal so users always get fresh checks on new app launch
+try {
+  if (typeof localStorage !== 'undefined') {
+    localStorage.removeItem(DISMISSED_SESSION_KEY);
+  }
+} catch {}
 
 /**
- * Compare two semver-like strings (e.g. "v1.0.1" and "1.0.0")
+ * Compare two semver-like strings (e.g. "v1.0.3" and "1.0.2")
  */
 export function isVersionGreater(latest: string, current: string): boolean {
   const cleanLatest = latest.replace(/^v/i, '').trim();
@@ -42,10 +53,18 @@ export function isVersionGreater(latest: string, current: string): boolean {
   return false;
 }
 
+/**
+ * Check if update has been dismissed during THIS application run/session.
+ * When the user quits and re-opens Wander, sessionStorage is fresh, ensuring
+ * updates are checked again on every launch.
+ */
 export function isUpdateDismissed(versionTag: string): boolean {
   try {
-    const dismissed = localStorage.getItem(DISMISSED_KEY);
-    return dismissed === versionTag;
+    if (typeof sessionStorage !== 'undefined') {
+      const dismissed = sessionStorage.getItem(DISMISSED_SESSION_KEY);
+      return dismissed === versionTag;
+    }
+    return false;
   } catch {
     return false;
   }
@@ -53,7 +72,9 @@ export function isUpdateDismissed(versionTag: string): boolean {
 
 export function dismissUpdate(versionTag: string): void {
   try {
-    localStorage.setItem(DISMISSED_KEY, versionTag);
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem(DISMISSED_SESSION_KEY, versionTag);
+    }
   } catch {
     // ignore
   }
@@ -61,19 +82,52 @@ export function dismissUpdate(versionTag: string): void {
 
 export function clearDismissedUpdate(): void {
   try {
-    localStorage.removeItem(DISMISSED_KEY);
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem(DISMISSED_SESSION_KEY);
+    }
   } catch {
     // ignore
   }
 }
 
+export async function getCurrentAppVersion(): Promise<string> {
+  try {
+    return await api.updater.getVersion();
+  } catch {
+    return FALLBACK_APP_VERSION;
+  }
+}
+
 /**
- * Check GitHub repository for the latest release
+ * Check GitHub repository for the latest release with platform-aware asset resolution
  */
 export async function checkForAppUpdates(): Promise<UpdateInfo> {
-  const currentVersion = CURRENT_APP_VERSION;
+  const currentVersion = await getCurrentAppVersion();
 
   try {
+    // If running in Electron, use the main-process autoUpdater
+    if (window.attentionApp?.updater?.check) {
+      const status: any = await window.attentionApp.updater.check();
+      const latestTag = status.latestVersion || '';
+      const isNewer = isVersionGreater(latestTag, currentVersion);
+
+      return {
+        available: status.stage !== 'error' && !!latestTag,
+        isNewer,
+        currentVersion,
+        latestVersion: latestTag,
+        releaseName: status.releaseName || latestTag,
+        releaseNotes: status.releaseNotes || '',
+        publishedAt: status.publishedAt || '',
+        releaseUrl: status.releaseUrl || 'https://github.com/guider23/Wander/releases',
+        assetName: status.assetName,
+        downloadUrl: status.downloadUrl,
+        totalBytes: status.totalBytes,
+        error: status.error
+      };
+    }
+
+    // Web preview fallback
     const response = await fetch('https://api.github.com/repos/guider23/Wander/releases/latest', {
       headers: {
         Accept: 'application/vnd.github.v3+json',
@@ -99,13 +153,11 @@ export async function checkForAppUpdates(): Promise<UpdateInfo> {
     const latestTag = data.tag_name || '';
     const isNewer = isVersionGreater(latestTag, currentVersion);
 
-    // Pick best asset for current platform
+    // Pick best asset for current browser platform
     const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
     let matchedAsset = data.assets?.find((a: any) =>
       isMac ? a.name.endsWith('.dmg') || a.name.endsWith('.zip') : a.name.endsWith('.exe')
     );
-
-    const downloadUrl = matchedAsset ? matchedAsset.browser_download_url : data.html_url;
 
     return {
       available: true,
@@ -116,7 +168,9 @@ export async function checkForAppUpdates(): Promise<UpdateInfo> {
       releaseNotes: data.body || '',
       publishedAt: data.published_at || '',
       releaseUrl: data.html_url || 'https://github.com/guider23/Wander/releases',
-      downloadUrl
+      assetName: matchedAsset?.name,
+      downloadUrl: matchedAsset ? matchedAsset.browser_download_url : data.html_url,
+      totalBytes: matchedAsset?.size
     };
   } catch (err: any) {
     return {

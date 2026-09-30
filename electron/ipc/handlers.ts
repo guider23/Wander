@@ -1,7 +1,8 @@
-import { ipcMain, shell } from 'electron';
+import { app, ipcMain, shell } from 'electron';
 import { z } from 'zod';
 import { IPC_CHANNELS } from './channels';
 import { ApplicationService } from '../application/service';
+import { autoUpdater } from '../updater/autoUpdater';
 
 export function registerIpcHandlers(service: ApplicationService): void {
   ipcMain.handle(IPC_CHANNELS.START_WORK, async (_event, payload) => {
@@ -129,36 +130,34 @@ export function registerIpcHandlers(service: ApplicationService): void {
     return { success: true };
   });
 
+  ipcMain.handle(IPC_CHANNELS.GET_APP_VERSION, async () => {
+    return app.getVersion();
+  });
+
   ipcMain.handle(IPC_CHANNELS.CHECK_FOR_UPDATES, async () => {
-    try {
-      const response = await fetch('https://api.github.com/repos/guider23/Wander/releases/latest', {
-        headers: { 'User-Agent': 'Attention-Path-Desktop' }
-      });
-      if (!response.ok) return { available: false, error: `GitHub API status ${response.status}` };
-      const data: any = await response.json();
-      return {
-        available: true,
-        tagName: data.tag_name,
-        name: data.name || data.tag_name,
-        body: data.body || '',
-        publishedAt: data.published_at,
-        htmlUrl: data.html_url,
-        assets: data.assets?.map((a: any) => ({
-          name: a.name,
-          browserDownloadUrl: a.browser_download_url,
-          size: a.size
-        })) || []
-      };
-    } catch (err: any) {
-      return { available: false, error: err.message };
-    }
+    return autoUpdater.checkForUpdates();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.START_UPDATE_DOWNLOAD, async (_event, payload) => {
+    const url = payload?.url;
+    return autoUpdater.startDownload(url);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GET_UPDATE_STATUS, async () => {
+    return autoUpdater.getStatus();
   });
 
   ipcMain.handle(IPC_CHANNELS.INSTALL_UPDATE, async (_event, payload) => {
-    const schema = z.object({ url: z.string().url() });
-    const validated = schema.parse(payload);
-    await shell.openExternal(validated.url);
-    return { success: true };
+    try {
+      await autoUpdater.installAndRestart();
+      return { success: true };
+    } catch (err: any) {
+      if (payload?.url) {
+        await shell.openExternal(payload.url);
+        return { success: true, openedBrowser: true };
+      }
+      throw err;
+    }
   });
 
   ipcMain.handle(IPC_CHANNELS.GET_ACTIVE_CONTEXT, async () => {

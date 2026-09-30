@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ArrowUpCircle, X, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowUpCircle, X, ChevronDown, ChevronUp, Download, ExternalLink } from 'lucide-react';
 import { UpdateInfo, dismissUpdate } from '../../utils/updater';
 import { api } from '../../api/client';
 
@@ -11,18 +11,64 @@ interface UpdateBannerProps {
 export const UpdateBanner: React.FC<UpdateBannerProps> = ({ update, onDismiss }) => {
   const [showNotes, setShowNotes] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState<{
+    stage: 'idle' | 'downloading' | 'downloaded' | 'installing' | 'error';
+    percent: number;
+    transferredMB: string;
+    totalMB: string;
+    error?: string;
+  }>({
+    stage: 'idle',
+    percent: 0,
+    transferredMB: '0',
+    totalMB: '0'
+  });
+
+  useEffect(() => {
+    const unsub = api.updater.onProgress((status) => {
+      const transferredMB = ((status.transferredBytes || 0) / (1024 * 1024)).toFixed(1);
+      const totalMB = ((status.totalBytes || 0) / (1024 * 1024)).toFixed(1);
+
+      setDownloadProgress({
+        stage: status.stage,
+        percent: status.downloadPercent || 0,
+        transferredMB,
+        totalMB,
+        error: status.error
+      });
+
+      if (status.stage === 'downloaded') {
+        // Automatically proceed to install and restart
+        api.updater.install(update.downloadUrl);
+      }
+    });
+
+    return () => unsub();
+  }, [update.downloadUrl]);
 
   const handleUpdate = async () => {
     setIsUpdating(true);
+    setDownloadProgress({
+      stage: 'downloading',
+      percent: 0,
+      transferredMB: '0',
+      totalMB: '0'
+    });
+
     try {
-      if (update.downloadUrl) {
-        await api.updater.install(update.downloadUrl);
+      if (window.attentionApp?.updater?.startDownload) {
+        await api.updater.startDownload(update.downloadUrl);
       } else {
-        await api.updater.install(update.releaseUrl);
+        await api.updater.install(update.downloadUrl || update.releaseUrl);
       }
-    } catch {
-      window.open(update.downloadUrl || update.releaseUrl, '_blank');
-    } finally {
+    } catch (err: any) {
+      setDownloadProgress({
+        stage: 'error',
+        percent: 0,
+        transferredMB: '0',
+        totalMB: '0',
+        error: err.message || 'Download failed'
+      });
       setIsUpdating(false);
     }
   };
@@ -31,6 +77,10 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ update, onDismiss })
     dismissUpdate(update.latestVersion);
     onDismiss();
   };
+
+  const isDownloading = downloadProgress.stage === 'downloading';
+  const isInstalling = downloadProgress.stage === 'downloaded' || downloadProgress.stage === 'installing';
+  const isError = downloadProgress.stage === 'error';
 
   return (
     <div
@@ -43,7 +93,7 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ update, onDismiss })
         flexDirection: 'column',
         gap: '6px',
         padding: '10px 14px',
-        backgroundColor: 'rgba(255, 255, 255, 0.94)',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         border: '1px solid rgba(216, 199, 184, 0.9)',
@@ -51,7 +101,7 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ update, onDismiss })
         boxShadow: '0 10px 32px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.04)',
         animation: 'notionFadeIn 200ms cubic-bezier(0.16, 1, 0.3, 1)',
         maxWidth: '380px',
-        minWidth: '300px'
+        minWidth: '310px'
       }}
       role="alert"
     >
@@ -59,36 +109,93 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ update, onDismiss })
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <ArrowUpCircle size={16} strokeWidth={2.2} color="#C49B71" />
           <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#181818', letterSpacing: '-0.01em' }}>
-            Update {update.latestVersion} available
+            {isInstalling
+              ? `Installing Wander ${update.latestVersion}...`
+              : isDownloading
+              ? `Downloading update (${downloadProgress.percent}%)`
+              : `Update ${update.latestVersion} available`}
           </span>
         </div>
 
-        <button
-          onClick={handleKeepCurrent}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: '#8A827B',
-            cursor: 'pointer',
-            padding: '2px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: '4px'
-          }}
-          title="Dismiss"
-        >
-          <X size={14} strokeWidth={2} />
-        </button>
+        {!isDownloading && !isInstalling && (
+          <button
+            onClick={handleKeepCurrent}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#8A827B',
+              cursor: 'pointer',
+              padding: '2px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '4px'
+            }}
+            title="Dismiss for this session"
+          >
+            <X size={14} strokeWidth={2} />
+          </button>
+        )}
       </div>
 
-      <div style={{ fontSize: '11.5px', color: '#5C554F', lineHeight: '1.4' }}>
-        You are on <code style={{ backgroundColor: 'rgba(0,0,0,0.06)', padding: '1px 4px', borderRadius: '4px' }}>v{update.currentVersion}</code>.
-        Install the latest version to get fixes and performance updates.
-      </div>
+      {!isDownloading && !isInstalling && (
+        <div style={{ fontSize: '11.5px', color: '#5C554F', lineHeight: '1.4' }}>
+          You are on <code style={{ backgroundColor: 'rgba(0,0,0,0.06)', padding: '1px 4px', borderRadius: '4px' }}>v{update.currentVersion}</code>.
+          Update now to get the latest fixes and improvements.
+        </div>
+      )}
+
+      {/* Live Download / Install Progress Bar */}
+      {(isDownloading || isInstalling) && (
+        <div style={{ margin: '4px 0 2px 0' }}>
+          <div
+            style={{
+              width: '100%',
+              height: '5px',
+              backgroundColor: 'rgba(0, 0, 0, 0.08)',
+              borderRadius: '3px',
+              overflow: 'hidden'
+            }}
+          >
+            <div
+              style={{
+                width: isInstalling ? '100%' : `${downloadProgress.percent}%`,
+                height: '100%',
+                backgroundColor: '#C49B71',
+                borderRadius: '3px',
+                transition: 'width 150ms linear'
+              }}
+            />
+          </div>
+
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontSize: '10.5px',
+              color: '#7A726A',
+              marginTop: '4px'
+            }}
+          >
+            <span>
+              {isInstalling
+                ? 'Restarting application...'
+                : `${downloadProgress.transferredMB} MB / ${downloadProgress.totalMB} MB`}
+            </span>
+            <span>{isInstalling ? 'Almost done' : `${downloadProgress.percent}%`}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Error state */}
+      {isError && (
+        <div style={{ fontSize: '11px', color: '#C04B37', margin: '2px 0' }}>
+          {downloadProgress.error || 'Update download encountered an issue.'}
+        </div>
+      )}
 
       {/* Release notes preview accordion */}
-      {update.releaseNotes && (
+      {!isDownloading && !isInstalling && update.releaseNotes && (
         <div>
           <button
             onClick={() => setShowNotes(!showNotes)}
@@ -132,51 +239,77 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ update, onDismiss })
       )}
 
       {/* Action Buttons */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', marginTop: '4px' }}>
-        <button
-          onClick={handleKeepCurrent}
-          style={{
-            background: 'none',
-            border: '1px solid rgba(0, 0, 0, 0.12)',
-            padding: '4px 10px',
-            borderRadius: '6px',
-            fontSize: '11px',
-            fontWeight: 500,
-            color: '#5C554F',
-            cursor: 'pointer',
-            transition: 'background-color 120ms ease'
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.05)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-        >
-          Keep v{update.currentVersion}
-        </button>
+      {!isDownloading && !isInstalling && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', marginTop: '4px' }}>
+          <button
+            onClick={handleKeepCurrent}
+            style={{
+              background: 'none',
+              border: '1px solid rgba(0, 0, 0, 0.12)',
+              padding: '4px 10px',
+              borderRadius: '6px',
+              fontSize: '11px',
+              fontWeight: 500,
+              color: '#5C554F',
+              cursor: 'pointer',
+              transition: 'background-color 120ms ease'
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.05)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+          >
+            Keep v{update.currentVersion}
+          </button>
 
-        <button
-          onClick={handleUpdate}
-          disabled={isUpdating}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '4px',
-            backgroundColor: '#181818',
-            border: 'none',
-            padding: '4px 12px',
-            borderRadius: '6px',
-            fontSize: '11px',
-            fontWeight: 600,
-            color: '#F5E6D8',
-            cursor: isUpdating ? 'wait' : 'pointer',
-            boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
-            transition: 'transform 120ms ease'
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.02)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
-        >
-          <ExternalLink size={11} strokeWidth={2} />
-          {isUpdating ? 'Opening...' : 'Update Now'}
-        </button>
-      </div>
+          <button
+            onClick={handleUpdate}
+            disabled={isUpdating}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              backgroundColor: '#181818',
+              border: 'none',
+              padding: '4px 12px',
+              borderRadius: '6px',
+              fontSize: '11px',
+              fontWeight: 600,
+              color: '#F5E6D8',
+              cursor: isUpdating ? 'wait' : 'pointer',
+              boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
+              transition: 'transform 120ms ease'
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.02)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+          >
+            <Download size={12} strokeWidth={2.2} />
+            {isUpdating ? 'Starting...' : 'Update Now'}
+          </button>
+        </div>
+      )}
+
+      {/* Fallback button if download errors out */}
+      {isError && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
+          <button
+            onClick={() => window.open(update.releaseUrl, '_blank')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              backgroundColor: '#FAFAF9',
+              border: '1px solid rgba(0, 0, 0, 0.15)',
+              padding: '4px 10px',
+              borderRadius: '6px',
+              fontSize: '11px',
+              color: '#181818',
+              cursor: 'pointer'
+            }}
+          >
+            <ExternalLink size={11} />
+            <span>Open in Browser</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 };

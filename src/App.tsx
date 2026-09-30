@@ -72,7 +72,7 @@ export const App: React.FC = () => {
 
   // Check for app updates automatically on startup (non-blocking)
   useEffect(() => {
-    const timer = setTimeout(async () => {
+    const checkUpdates = async () => {
       try {
         const info = await checkForAppUpdates();
         if (info.isNewer && !isUpdateDismissed(info.latestVersion)) {
@@ -81,7 +81,9 @@ export const App: React.FC = () => {
       } catch {
         // Silently ignore if offline
       }
-    }, 2500);
+    };
+
+    const timer = setTimeout(checkUpdates, 1000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -478,6 +480,7 @@ export const App: React.FC = () => {
       {/* Floating macOS-Style Dock at the Bottom */}
       <MacDock
         activeTitle={activeRootNode?.title}
+        hasUpdate={!!updateInfo?.isNewer}
         onNewWork={() => handleOpenCommand('work')}
         onOpenHistory={() => {
           setSpotlightTab('history');

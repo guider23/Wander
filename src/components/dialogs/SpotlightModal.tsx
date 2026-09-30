@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { History, SlidersHorizontal, Search, ArrowUpRight, Download, Upload, X, Trash2 } from 'lucide-react';
 import { api, HistoryItemDTO } from '../../api/client';
 import { AppSettings } from '../../domain/entities/types';
-import { checkForAppUpdates, CURRENT_APP_VERSION } from '../../utils/updater';
+import { checkForAppUpdates, getCurrentAppVersion, UpdateInfo } from '../../utils/updater';
 
 interface SpotlightModalProps {
   isOpen: boolean;
@@ -30,16 +30,48 @@ export const SpotlightModal: React.FC<SpotlightModalProps> = ({
     reducedMotion: false,
     highContrast: false
   });
+  const [currentAppVersion, setCurrentAppVersion] = useState<string>('1.0.2');
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [updateStatus, setUpdateStatus] = useState<string | null>(null);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState<{
+    stage: 'idle' | 'downloading' | 'downloaded' | 'installing' | 'error';
+    percent: number;
+    transferredMB: string;
+    totalMB: string;
+    error?: string;
+  }>({
+    stage: 'idle',
+    percent: 0,
+    transferredMB: '0',
+    totalMB: '0'
+  });
 
   useEffect(() => {
     if (isOpen) {
       setTab(initialTab);
       api.history.list().then(setHistoryItems).catch(() => {});
       api.settings.get().then(setSettings).catch(() => {});
+      getCurrentAppVersion().then(setCurrentAppVersion).catch(() => {});
+
+      const unsub = api.updater.onProgress((status) => {
+        const transferredMB = ((status.transferredBytes || 0) / (1024 * 1024)).toFixed(1);
+        const totalMB = ((status.totalBytes || 0) / (1024 * 1024)).toFixed(1);
+        setDownloadProgress({
+          stage: status.stage,
+          percent: status.downloadPercent || 0,
+          transferredMB,
+          totalMB,
+          error: status.error
+        });
+        if (status.stage === 'downloaded') {
+          setUpdateStatus('Installing & restarting...');
+          api.updater.install(updateInfo?.downloadUrl);
+        }
+      });
+      return () => unsub();
     }
-  }, [isOpen, initialTab]);
+  }, [isOpen, initialTab, updateInfo?.downloadUrl]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -525,49 +557,132 @@ export const SpotlightModal: React.FC<SpotlightModalProps> = ({
               <div
                 style={{
                   display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '8px 0',
+                  flexDirection: 'column',
+                  gap: '8px',
+                  padding: '10px 0',
                   borderBottom: '1px solid rgba(0, 0, 0, 0.05)'
                 }}
               >
-                <div>
-                  <div style={{ fontSize: '13px', fontWeight: 550, color: '#1A1A1A' }}>App Updates</div>
-                  <div style={{ fontSize: '11px', color: '#9B9A97' }}>
-                    Attention Path v{CURRENT_APP_VERSION} {updateStatus && `• ${updateStatus}`}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 550, color: '#1A1A1A' }}>App Updates</div>
+                    <div style={{ fontSize: '11px', color: '#9B9A97' }}>
+                      Attention Path v{currentAppVersion} {updateStatus && `• ${updateStatus}`}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {updateInfo?.isNewer && downloadProgress.stage === 'idle' && (
+                      <button
+                        onClick={async () => {
+                          setDownloadProgress({ stage: 'downloading', percent: 0, transferredMB: '0', totalMB: '0' });
+                          try {
+                            if (window.attentionApp?.updater?.startDownload) {
+                              await api.updater.startDownload(updateInfo.downloadUrl);
+                            } else {
+                              await api.updater.install(updateInfo.downloadUrl || updateInfo.releaseUrl);
+                            }
+                          } catch (err: any) {
+                            setDownloadProgress({
+                              stage: 'error',
+                              percent: 0,
+                              transferredMB: '0',
+                              totalMB: '0',
+                              error: err.message || 'Download failed'
+                            });
+                          }
+                        }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          padding: '4px 12px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          backgroundColor: '#181818',
+                          color: '#F5E6D8',
+                          fontSize: '11.5px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          boxShadow: '0 2px 5px rgba(0, 0, 0, 0.12)'
+                        }}
+                      >
+                        <Download size={12} strokeWidth={2.2} />
+                        <span>Download & Update</span>
+                      </button>
+                    )}
+
+                    <button
+                      onClick={async () => {
+                        setIsCheckingUpdate(true);
+                        setUpdateStatus('Checking GitHub...');
+                        try {
+                          const res = await checkForAppUpdates();
+                          setUpdateInfo(res);
+                          if (res.isNewer) {
+                            setUpdateStatus(`v${res.latestVersion} available!`);
+                          } else {
+                            setUpdateStatus('Up to date');
+                          }
+                        } catch {
+                          setUpdateStatus('Check failed');
+                        } finally {
+                          setIsCheckingUpdate(false);
+                        }
+                      }}
+                      disabled={isCheckingUpdate || downloadProgress.stage === 'downloading'}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        border: '1px solid rgba(0, 0, 0, 0.12)',
+                        backgroundColor: '#FFFFFF',
+                        color: '#1A1A1A',
+                        fontSize: '11.5px',
+                        fontWeight: 500,
+                        cursor: isCheckingUpdate ? 'wait' : 'pointer'
+                      }}
+                    >
+                      {isCheckingUpdate ? 'Checking...' : updateInfo?.isNewer ? 'Re-check' : 'Check for Updates'}
+                    </button>
                   </div>
                 </div>
-                <button
-                  onClick={async () => {
-                    setIsCheckingUpdate(true);
-                    setUpdateStatus('Checking GitHub...');
-                    try {
-                      const res = await checkForAppUpdates();
-                      if (res.isNewer) {
-                        setUpdateStatus(`v${res.latestVersion} available!`);
-                      } else {
-                        setUpdateStatus('Up to date');
-                      }
-                    } catch {
-                      setUpdateStatus('Check failed');
-                    } finally {
-                      setIsCheckingUpdate(false);
-                    }
-                  }}
-                  disabled={isCheckingUpdate}
-                  style={{
-                    padding: '4px 10px',
-                    borderRadius: '6px',
-                    border: '1px solid rgba(0, 0, 0, 0.12)',
-                    backgroundColor: '#FFFFFF',
-                    color: '#1A1A1A',
-                    fontSize: '11.5px',
-                    fontWeight: 500,
-                    cursor: isCheckingUpdate ? 'wait' : 'pointer'
-                  }}
-                >
-                  {isCheckingUpdate ? 'Checking...' : 'Check for Updates'}
-                </button>
+
+                {/* Progress bar inside Preferences dialog */}
+                {(downloadProgress.stage === 'downloading' || downloadProgress.stage === 'downloaded' || downloadProgress.stage === 'installing') && (
+                  <div style={{ marginTop: '2px', padding: '6px 8px', backgroundColor: 'rgba(0, 0, 0, 0.03)', borderRadius: '6px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#5C554F', marginBottom: '4px' }}>
+                      <span>
+                        {downloadProgress.stage === 'installing' || downloadProgress.stage === 'downloaded'
+                          ? 'Installing update & restarting Wander...'
+                          : `Downloading update... ${downloadProgress.transferredMB} MB / ${downloadProgress.totalMB} MB`}
+                      </span>
+                      <span style={{ fontWeight: 600 }}>{downloadProgress.percent}%</span>
+                    </div>
+                    <div style={{ width: '100%', height: '5px', backgroundColor: 'rgba(0, 0, 0, 0.08)', borderRadius: '3px', overflow: 'hidden' }}>
+                      <div
+                        style={{
+                          width: `${downloadProgress.stage === 'installing' || downloadProgress.stage === 'downloaded' ? 100 : downloadProgress.percent}%`,
+                          height: '100%',
+                          backgroundColor: '#C49B71',
+                          borderRadius: '3px',
+                          transition: 'width 150ms linear'
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {downloadProgress.stage === 'error' && (
+                  <div style={{ fontSize: '11px', color: '#C04B37', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>{downloadProgress.error || 'Download failed'}</span>
+                    <button
+                      onClick={() => window.open(updateInfo?.releaseUrl || 'https://github.com/guider23/Wander/releases', '_blank')}
+                      style={{ background: 'none', border: 'none', color: '#A06A38', cursor: 'pointer', fontSize: '11px', textDecoration: 'underline' }}
+                    >
+                      Open in Browser
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div style={{ paddingTop: '10px', display: 'flex', gap: '8px' }}>

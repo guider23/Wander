@@ -9,6 +9,7 @@ interface MacDockProps {
   onOpenHistory: () => void;
   onOpenSettings: () => void;
   onOpenGuide: () => void;
+  hasUpdate?: boolean;
 }
 
 interface DockItem {
@@ -25,7 +26,8 @@ export const MacDock: React.FC<MacDockProps> = ({
   onNewWork,
   onOpenHistory,
   onOpenSettings,
-  onOpenGuide
+  onOpenGuide,
+  hasUpdate
 }) => {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
@@ -156,6 +158,23 @@ export const MacDock: React.FC<MacDockProps> = ({
                       borderRadius: '50%',
                       backgroundColor: '#181818'
                     }}
+                  />
+                )}
+
+                {/* Available update notification badge */}
+                {item.id === 'settings' && hasUpdate && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '4px',
+                      right: '4px',
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      backgroundColor: '#C49B71',
+                      boxShadow: '0 0 5px rgba(196, 155, 113, 0.7)'
+                    }}
+                    title="App update available"
                   />
                 )}
               </button>
