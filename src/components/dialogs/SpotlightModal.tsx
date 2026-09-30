@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { History, SlidersHorizontal, Search, ArrowUpRight, Download, X, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { History, SlidersHorizontal, Search, ArrowUpRight, Download, Upload, X, Trash2 } from 'lucide-react';
 import { api, HistoryItemDTO } from '../../api/client';
 import { AppSettings } from '../../domain/entities/types';
 import { checkForAppUpdates, CURRENT_APP_VERSION } from '../../utils/updater';
@@ -74,6 +74,33 @@ export const SpotlightModal: React.FC<SpotlightModalProps> = ({
     a.click();
     URL.revokeObjectURL(url);
     showToast('Export downloaded');
+  };
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const res = await api.data.import(parsed);
+      showToast(`Imported ${res?.importedTrees ?? 0} trees, ${res?.importedNodes ?? 0} nodes`);
+      onRefreshContext?.();
+      const updated = await api.history.list();
+      setHistoryItems(updated);
+    } catch (err: any) {
+      showToast(err.message || 'Failed to import JSON data');
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
   const handleDeleteTree = async (e: React.MouseEvent, treeId: string) => {
@@ -566,6 +593,37 @@ export const SpotlightModal: React.FC<SpotlightModalProps> = ({
                   <Download size={13} strokeWidth={2} />
                   <span>Export JSON</span>
                 </button>
+
+                <button
+                  onClick={handleImportClick}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(0, 0, 0, 0.12)',
+                    backgroundColor: '#FAFAF9',
+                    color: '#1A1A1A',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: 'pointer',
+                    transition: 'all 120ms ease'
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.05)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#FAFAF9')}
+                >
+                  <Upload size={13} strokeWidth={2} />
+                  <span>Import JSON</span>
+                </button>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".json,application/json"
+                  style={{ display: 'none' }}
+                  onChange={handleFileChange}
+                />
               </div>
             </div>
           )}
