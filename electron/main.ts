@@ -38,7 +38,7 @@ function createWindow(): BrowserWindow {
   let isDocked = false;
   let isDockingInProgress = false;
   let normalBounds = { width: 1150, height: 820, x: 0, y: 0 };
-  let autoDockEnabled = true;
+  let autoDockEnabled = false;
 
   const isMac = process.platform === 'darwin';
   const iconPath = path.join(__dirname, '../app-icon.png');
@@ -56,7 +56,7 @@ function createWindow(): BrowserWindow {
     autoHideMenuBar: true,
     title: 'Attention Path',
     icon: iconPath,
-    skipTaskbar: !isMac, // Run seamlessly in background on Windows; on macOS Dock is managed
+    skipTaskbar: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -123,7 +123,12 @@ function createWindow(): BrowserWindow {
   function dockToEdge() {
     if (isDocked || isDockingInProgress || !win || win.isDestroyed()) return;
     isDockingInProgress = true;
-    normalBounds = win.getBounds();
+    
+    // Only capture normalBounds if current window is in full normal mode
+    const curBounds = win.getBounds();
+    if (curBounds.width > 400 && curBounds.height > 400) {
+      normalBounds = curBounds;
+    }
 
     // 1. Tell renderer to play the smooth Apple genie minimize animation
     win.webContents.send('attention:dock-start');
@@ -140,7 +145,7 @@ function createWindow(): BrowserWindow {
       const dockWidth = 60;
       const dockHeight = 250;
       const targetX = dX + dW - dockWidth;
-      const targetY = Math.round(dY + dH / 2 - dockHeight / 2);
+      const targetY = Math.max(dY, Math.min(dY + dH - dockHeight, Math.round(dY + dH / 2 - dockHeight / 2)));
 
       // Tell React to render transparent EdgeDockHandle FIRST before resizing OS window
       win.webContents.send('attention:dock-changed', true);
@@ -171,37 +176,24 @@ function createWindow(): BrowserWindow {
     isDocked = false;
     isDockingInProgress = false;
     win.setAlwaysOnTop(false);
-    win.setBounds(normalBounds);
+
+    const targetBounds = (normalBounds.width > 400 && normalBounds.height > 400)
+      ? normalBounds
+      : { width: 1150, height: 820, x: normalBounds.x || 100, y: normalBounds.y || 100 };
+    win.setBounds(targetBounds);
     if (isMac && typeof win.setWindowButtonVisibility === 'function') {
       win.setWindowButtonVisibility(false);
     }
+    win.show();
     win.focus();
     win.webContents.send('attention:dock-changed', false);
   }
 
-  // Smooth auto-dock to screen edge when user clicks outside the app
-  let blurTimer: NodeJS.Timeout | null = null;
-  win.on('blur', () => {
-    if (process.env.SCREENSHOT_MODE === '1' || !autoDockEnabled || isDocked || isDockingInProgress) return;
-    blurTimer = setTimeout(() => {
-      if (!win.isDestroyed() && !win.isFocused() && !isDocked && !isDockingInProgress) {
-        dockToEdge();
-      }
-    }, 220);
-  });
-
-  win.on('focus', () => {
-    if (blurTimer) {
-      clearTimeout(blurTimer);
-      blurTimer = null;
-    }
-  });
-
-  // Intercept window close to keep running in background tray unless quitting
+  // Intercept window close to keep running in background taskbar/tray unless quitting
   win.on('close', (e) => {
     if (!isQuitting) {
       e.preventDefault();
-      dockToEdge();
+      win.minimize();
     }
   });
 
@@ -223,7 +215,7 @@ function createWindow(): BrowserWindow {
   });
 
   ipcMain.handle(IPC_CHANNELS.WINDOW_MINIMIZE, () => {
-    dockToEdge();
+    win.minimize();
     return true;
   });
 
@@ -316,17 +308,12 @@ function setupSystemTray(
   appTray.on('click', () => {
     if (actions.isDocked()) {
       actions.expandWindow();
-    } else if (!win.isVisible() || win.isMinimized()) {
+    } else {
+      if (win.isMinimized()) win.restore();
       win.show();
       win.focus();
-    } else {
-      dockToEdgeAction();
     }
   });
-
-  function dockToEdgeAction() {
-    actions.dockToEdge();
-  }
 }
 
 app.whenReady().then(() => {
