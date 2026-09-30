@@ -17,7 +17,7 @@ export interface UpdateInfo {
   error?: string;
 }
 
-export const CURRENT_APP_VERSION = '1.0.1';
+export const CURRENT_APP_VERSION = '1.0.2';
 const DISMISSED_KEY = 'wander_dismissed_update_version';
 
 /**

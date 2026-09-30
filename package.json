@@ -1,6 +1,6 @@
 {
   "name": "attention-path",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Windows desktop application for visually recording how attention moves between work and curiosity.",
   "main": "dist-electron/main.js",
   "author": "Google DeepMind / Attention Path Team",
