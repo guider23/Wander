@@ -14,7 +14,6 @@ import { autocorrectSentence } from './domain/autocorrect/engine';
 import { AppSettings } from './domain/entities/types';
 import { api, ActiveContextDTO } from './api/client';
 import { GalaxyCanvas } from './components/canvas/GalaxyCanvas';
-import galaxyBg from './assets/galaxy-bg.jpg';
 
 export const App: React.FC = () => {
   const [activeContext, setActiveContext] = useState<ActiveContextDTO>({
@@ -76,17 +75,11 @@ export const App: React.FC = () => {
     };
   }, []);
 
-  // Pre-decode galaxy backdrop image and pre-warm WebGL shader pipeline during idle time.
-  // This ensures shader compilation and texture upload happen in the background at launch,
+  // Pre-warm WebGL shader pipeline during idle time.
+  // This ensures shader compilation happens in the background at launch,
   // completely eliminating the first-transition GPU shader compilation lag.
   const [isGalaxyWarmedUp, setIsGalaxyWarmedUp] = useState(false);
   useEffect(() => {
-    const img = new Image();
-    img.src = galaxyBg;
-    if ('decode' in img) {
-      img.decode().catch(() => {});
-    }
-
     const timer = setTimeout(() => {
       setIsGalaxyWarmedUp(true);
     }, 350);
@@ -604,19 +597,6 @@ export const App: React.FC = () => {
           transform: 'translateZ(0)'
         }}
       >
-        {/* Subtle static image underlay for instant depth while WebGL initializes */}
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            backgroundImage: `url(${galaxyBg})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            opacity: 0.35,
-            pointerEvents: 'none',
-            transform: 'translateZ(0)'
-          }}
-        />
         <GalaxyCanvas
           active={isContinuumMode || isGalaxyWarmedUp}
           opacity={1}

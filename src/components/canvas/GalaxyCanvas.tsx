@@ -77,18 +77,18 @@ void drawHeroStar(inout vec3 col, vec2 uv, vec2 center, float size, vec3 starCol
   float dist = length(delta);
   float tw = 0.85 + 0.15 * sin(time * 1.5 + seed);
 
-  float core = smoothstep(0.0026 * size, 0.0, dist) * 1.8;
-  float aura = (0.00028 * size) / (dist * dist + 0.00030);
-  aura = clamp(aura, 0.0, 0.75);
+  float core = smoothstep(0.0035 * size, 0.0, dist) * 2.2;
+  float aura = (0.00045 * size) / (dist * dist + 0.00022);
+  aura = clamp(aura, 0.0, 1.2);
 
   float spikeIntensity = 0.0;
-  if (dist < 0.06 * size) {
-    float sx = max(0.0, 1.0 - abs(delta.x) * 550.0 / size) * exp(-abs(delta.y) * 50.0 / size);
-    float sy = max(0.0, 1.0 - abs(delta.y) * 550.0 / size) * exp(-abs(delta.x) * 50.0 / size);
-    spikeIntensity = (sx + sy) * 0.25;
+  if (dist < 0.08 * size) {
+    float sx = max(0.0, 1.0 - abs(delta.x) * 450.0 / size) * exp(-abs(delta.y) * 40.0 / size);
+    float sy = max(0.0, 1.0 - abs(delta.y) * 450.0 / size) * exp(-abs(delta.x) * 40.0 / size);
+    spikeIntensity = (sx + sy) * 0.40;
   }
 
-  col += starColor * (core + aura * 0.50 + spikeIntensity) * tw;
+  col += starColor * (core + aura * 0.75 + spikeIntensity) * tw;
 }
 
 void main() {
@@ -125,36 +125,36 @@ void main() {
 
   float tealWeight = smoothstep(-0.15, 0.55, ridge * 0.85 + r.x * 0.55 + p.y * 0.4);
 
-  vec3 c_teal_dark   = vec3(0.015, 0.085, 0.105);
-  vec3 c_teal_mid    = vec3(0.035, 0.160, 0.185);
-  vec3 c_teal_bright = vec3(0.065, 0.245, 0.275);
-  vec3 c_teal_glow   = vec3(0.120, 0.380, 0.400);
+  vec3 c_teal_dark   = vec3(0.039, 0.239, 0.259);
+  vec3 c_teal_mid    = vec3(0.094, 0.345, 0.388);
+  vec3 c_teal_bright = vec3(0.149, 0.478, 0.522);
+  vec3 c_teal_glow   = vec3(0.306, 0.722, 0.729);
 
-  vec3 c_violet_dark   = vec3(0.065, 0.035, 0.115);
-  vec3 c_violet_mid    = vec3(0.110, 0.055, 0.170);
-  vec3 c_violet_bright = vec3(0.145, 0.075, 0.195);
-  vec3 c_violet_glow   = vec3(0.200, 0.105, 0.260);
+  vec3 c_violet_dark   = vec3(0.169, 0.106, 0.282);
+  vec3 c_violet_mid    = vec3(0.243, 0.141, 0.376);
+  vec3 c_violet_bright = vec3(0.298, 0.149, 0.400);
+  vec3 c_violet_glow   = vec3(0.420, 0.231, 0.541);
 
-  float t_amt = clamp(gasDensity * tealWeight * 1.35, 0.0, 1.0);
-  vec3 col_teal = mix(c_teal_dark, c_teal_mid, smoothstep(0.10, 0.45, t_amt));
-  col_teal = mix(col_teal, c_teal_bright, smoothstep(0.45, 0.85, t_amt));
-  col_teal += c_teal_glow * pow(smoothstep(0.75, 1.0, t_amt), 2.5) * 0.35;
+  float t_amt = clamp(gasDensity * tealWeight * 1.55, 0.0, 1.0);
+  vec3 col_teal = mix(c_teal_dark, c_teal_mid, smoothstep(0.08, 0.38, t_amt));
+  col_teal = mix(col_teal, c_teal_bright, smoothstep(0.38, 0.75, t_amt));
+  col_teal += c_teal_glow * pow(smoothstep(0.70, 1.0, t_amt), 2.2) * 0.65;
 
-  float v_amt = clamp(gasDensity * violetWeight * 1.25, 0.0, 1.0);
-  vec3 col_violet = mix(c_violet_dark, c_violet_mid, smoothstep(0.10, 0.45, v_amt));
-  col_violet = mix(col_violet, c_violet_bright, smoothstep(0.45, 0.85, v_amt));
-  col_violet += c_violet_glow * pow(smoothstep(0.80, 1.0, v_amt), 2.5) * 0.30;
+  float v_amt = clamp(gasDensity * violetWeight * 1.45, 0.0, 1.0);
+  vec3 col_violet = mix(c_violet_dark, c_violet_mid, smoothstep(0.08, 0.40, v_amt));
+  col_violet = mix(col_violet, c_violet_bright, smoothstep(0.40, 0.80, v_amt));
+  col_violet += c_violet_glow * pow(smoothstep(0.75, 1.0, v_amt), 2.2) * 0.55;
 
-  vec3 nebula = (col_teal * smoothstep(0.05, 0.30, t_amt) +
-                 col_violet * smoothstep(0.05, 0.30, v_amt)) * 0.75;
+  vec3 nebula = col_teal * smoothstep(0.04, 0.25, t_amt) +
+                col_violet * smoothstep(0.04, 0.25, v_amt);
 
   float dustNoise = fbm5(p * 1.75 + vec2(1.8, 6.2) + q * 1.5);
   float dustRift = smoothstep(0.02, 0.50, dustNoise);
   float dustAbsorption = clamp(dustRift * 1.25 * beltMask, 0.0, 0.94);
   nebula = mix(nebula, nebula * 0.06, dustAbsorption);
 
-  vec3 c_void_base = vec3(0.006, 0.012, 0.024);
-  vec3 c_void_ambient = vec3(0.012, 0.020, 0.038);
+  vec3 c_void_base = vec3(0.010, 0.022, 0.045);
+  vec3 c_void_ambient = vec3(0.020, 0.035, 0.070);
   vec3 voidColor = mix(c_void_base, c_void_ambient, clamp(length(uv) * 0.35, 0.0, 1.0));
 
   vec3 color = voidColor + nebula;
@@ -202,11 +202,11 @@ void main() {
     }
   }
 
-  drawHeroStar(color, uv, vec2(0.66, -0.36), 1.05, vec3(0.88, 0.95, 1.0), u_time, 1.0);
-  drawHeroStar(color, uv, vec2(-0.72, 0.35), 0.95, vec3(0.92, 0.95, 1.0), u_time, 2.7);
-  drawHeroStar(color, uv, vec2(-0.52, -0.12), 0.75, vec3(0.85, 0.93, 1.0), u_time, 4.3);
-  drawHeroStar(color, uv, vec2(0.38, 0.28), 0.70, vec3(0.80, 0.95, 0.98), u_time, 5.8);
-  drawHeroStar(color, uv, vec2(-0.18, -0.42), 0.65, vec3(1.0, 0.96, 0.90), u_time, 7.2);
+  drawHeroStar(color, uv, vec2(0.66, -0.36), 1.35, vec3(0.88, 0.95, 1.0), u_time, 1.0);
+  drawHeroStar(color, uv, vec2(-0.72, 0.35), 1.15, vec3(0.92, 0.95, 1.0), u_time, 2.7);
+  drawHeroStar(color, uv, vec2(-0.52, -0.12), 0.90, vec3(0.85, 0.93, 1.0), u_time, 4.3);
+  drawHeroStar(color, uv, vec2(0.38, 0.28), 0.85, vec3(0.80, 0.95, 0.98), u_time, 5.8);
+  drawHeroStar(color, uv, vec2(-0.18, -0.42), 0.80, vec3(1.0, 0.96, 0.90), u_time, 7.2);
 
   float vig = 1.0 - 0.25 * pow(length(v_uv - 0.5) * 1.35, 2.0);
   color *= clamp(vig, 0.0, 1.0);
@@ -416,7 +416,7 @@ export const GalaxyCanvas: React.FC<GalaxyCanvasProps> = ({
       ctx2D.globalAlpha = opacityRef.current;
 
       // Base void fill
-      ctx2D.fillStyle = '#02050A';
+      ctx2D.fillStyle = '#03070E';
       ctx2D.fillRect(0, 0, w, h);
 
       // Subtle slow drift
@@ -428,10 +428,10 @@ export const GalaxyCanvas: React.FC<GalaxyCanvasProps> = ({
         w * 0.45 + driftX, h * 0.52 + driftY, 0,
         w * 0.45 + driftX, h * 0.52 + driftY, w * 0.45
       );
-      violetGrad.addColorStop(0.0, 'rgba(55, 25, 78, 0.28)');
-      violetGrad.addColorStop(0.4, 'rgba(32, 18, 54, 0.16)');
-      violetGrad.addColorStop(0.8, 'rgba(18, 10, 32, 0.06)');
-      violetGrad.addColorStop(1.0, 'rgba(2, 5, 10, 0.0)');
+      violetGrad.addColorStop(0.0, 'rgba(76, 38, 102, 0.45)');
+      violetGrad.addColorStop(0.4, 'rgba(43, 27, 72, 0.28)');
+      violetGrad.addColorStop(0.8, 'rgba(25, 14, 45, 0.10)');
+      violetGrad.addColorStop(1.0, 'rgba(3, 7, 14, 0.0)');
 
       ctx2D.globalCompositeOperation = 'screen';
       ctx2D.fillStyle = violetGrad;
@@ -442,10 +442,10 @@ export const GalaxyCanvas: React.FC<GalaxyCanvasProps> = ({
         w * 0.58 - driftX, h * 0.46 - driftY, 0,
         w * 0.58 - driftX, h * 0.46 - driftY, w * 0.38
       );
-      tealGrad.addColorStop(0.0, 'rgba(24, 78, 88, 0.24)');
-      tealGrad.addColorStop(0.3, 'rgba(14, 52, 60, 0.14)');
-      tealGrad.addColorStop(0.7, 'rgba(6, 32, 36, 0.05)');
-      tealGrad.addColorStop(1.0, 'rgba(2, 5, 10, 0.0)');
+      tealGrad.addColorStop(0.0, 'rgba(38, 122, 133, 0.40)');
+      tealGrad.addColorStop(0.3, 'rgba(22, 88, 98, 0.25)');
+      tealGrad.addColorStop(0.7, 'rgba(10, 61, 66, 0.08)');
+      tealGrad.addColorStop(1.0, 'rgba(3, 7, 14, 0.0)');
 
       ctx2D.fillStyle = tealGrad;
       ctx2D.fillRect(0, 0, w, h);
