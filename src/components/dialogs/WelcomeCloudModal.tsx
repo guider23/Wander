@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Cloud, Sparkles, RefreshCw, X, ArrowRight, AlertCircle } from 'lucide-react';
+import { RefreshCw, X, ArrowRight, AlertCircle, HardDrive, ShieldCheck } from 'lucide-react';
 import { api } from '../../api/client';
+import { WanderLogo } from '../icons/WanderLogo';
 
 interface WelcomeCloudModalProps {
   isOpen: boolean;
@@ -66,13 +67,10 @@ export const WelcomeCloudModal: React.FC<WelcomeCloudModalProps> = ({
     <div
       style={{
         position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(15, 14, 12, 0.45)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
+        inset: 0,
+        backgroundColor: 'rgba(12, 10, 8, 0.55)',
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
         zIndex: 1500,
         display: 'flex',
         alignItems: 'center',
@@ -89,180 +87,203 @@ export const WelcomeCloudModal: React.FC<WelcomeCloudModalProps> = ({
         role="dialog"
         aria-modal="true"
         style={{
-          width: '560px',
+          width: '520px',
           maxWidth: '92vw',
-          backgroundColor: '#FFFFFF',
+          backgroundColor: 'var(--background-card)',
           borderRadius: '16px',
-          border: '1px solid rgba(0, 0, 0, 0.08)',
-          boxShadow: '0 24px 64px -12px rgba(0, 0, 0, 0.22), 0 4px 16px rgba(0, 0, 0, 0.05)',
+          border: '1px solid var(--ink-border)',
+          boxShadow: 'var(--shadow-notion)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          animation: 'notionFadeIn 160ms cubic-bezier(0.16, 1, 0.3, 1)'
+          animation: 'notionFadeIn 180ms cubic-bezier(0.16, 1, 0.3, 1)',
+          color: 'var(--ink)'
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div
           style={{
-            padding: '22px 24px 16px 24px',
-            borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
+            padding: '28px 28px 20px 28px',
+            position: 'relative',
             display: 'flex',
-            alignItems: 'flex-start',
-            justifyContent: 'space-between',
-            backgroundColor: '#FAF9F5'
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center',
+            borderBottom: '1px solid var(--ink-border)'
           }}
         >
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span
-                style={{
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  color: '#8C7A6B'
-                }}
-              >
-                Welcome to Wander
-              </span>
-            </div>
-            <h2
-              style={{
-                margin: '4px 0 0 0',
-                fontSize: '18px',
-                fontWeight: 650,
-                color: '#181818',
-                letterSpacing: '-0.02em'
-              }}
-            >
-              Get Started
-            </h2>
-            <p
-              style={{
-                margin: '4px 0 0 0',
-                fontSize: '12.5px',
-                color: '#6A625A',
-                lineHeight: 1.45
-              }}
-            >
-              Choose how you would like to set up your attention canvas on this machine.
-            </p>
-          </div>
-
           <button
             onClick={onClose}
             disabled={isConnecting || isRestoring}
-            aria-label="Dismiss"
+            aria-label="Close"
             style={{
+              position: 'absolute',
+              top: '18px',
+              right: '18px',
               background: 'none',
               border: 'none',
-              color: '#8C7A6B',
+              color: 'var(--ink-muted)',
               cursor: isConnecting || isRestoring ? 'not-allowed' : 'pointer',
               padding: '6px',
               borderRadius: '6px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              transition: 'background-color 120ms ease, color 120ms ease'
+              transition: 'all 120ms ease'
             }}
             onMouseEnter={(e) => {
               if (!isConnecting && !isRestoring) {
-                e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.05)';
-                e.currentTarget.style.color = '#181818';
+                e.currentTarget.style.color = 'var(--ink)';
+                e.currentTarget.style.backgroundColor = 'var(--dock-hover)';
               }
             }}
             onMouseLeave={(e) => {
+              e.currentTarget.style.color = 'var(--ink-muted)';
               e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = '#8C7A6B';
             }}
           >
             <X size={16} />
           </button>
+
+          {/* Botanical Emblem */}
+          <div
+            style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '12px',
+              backgroundColor: 'var(--background)',
+              border: '1px solid var(--ink-border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '14px',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
+            }}
+          >
+            <WanderLogo size={24} color="currentColor" />
+          </div>
+
+          <h2
+            style={{
+              margin: 0,
+              fontSize: '20px',
+              fontWeight: 600,
+              letterSpacing: '-0.025em',
+              color: 'var(--ink)'
+            }}
+          >
+            Welcome to Wander
+          </h2>
+          <p
+            style={{
+              margin: '6px 0 0 0',
+              fontSize: '13px',
+              color: 'var(--ink-secondary)',
+              lineHeight: 1.5,
+              maxWidth: '380px'
+            }}
+          >
+            A local-first canvas for recording how attention moves between deep work and curiosity.
+          </p>
         </div>
 
-        {/* Content Options */}
-        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {/* Option A: Restore from Google Drive */}
+        {/* Options */}
+        <div style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {/* Option 1: Cloud Restore */}
           <div
             style={{
               padding: '16px 18px',
               borderRadius: '12px',
-              border: '1.5px solid rgba(35, 131, 226, 0.28)',
-              backgroundColor: 'rgba(35, 131, 226, 0.02)',
+              border: '1px solid var(--ink-border)',
+              backgroundColor: 'var(--background-glass)',
               display: 'flex',
               flexDirection: 'column',
-              gap: '10px',
-              transition: 'all 140ms ease'
+              gap: '12px',
+              transition: 'border-color 150ms ease, box-shadow 150ms ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = 'var(--accent)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = 'var(--ink-border)';
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
               <div
                 style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '9px',
-                  backgroundColor: 'rgba(35, 131, 226, 0.1)',
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '10px',
+                  backgroundColor: 'var(--background)',
+                  border: '1px solid var(--ink-border)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  flexShrink: 0
+                  flexShrink: 0,
+                  marginTop: '1px'
                 }}
               >
-                <Cloud size={18} color="#0B6ECA" />
+                {/* Clean botanical cloud sync SVG */}
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />
+                  <path d="M12 12v6" />
+                  <path d="m9 15 3-3 3 3" />
+                </svg>
               </div>
+
               <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ fontSize: '14px', fontWeight: 600, color: '#181818' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ink)' }}>
                     Restore from Google Drive
-                  </span>
+                  </div>
                   <span
                     style={{
-                      fontSize: '10px',
-                      fontWeight: 600,
-                      padding: '1px 6px',
-                      borderRadius: '4px',
-                      backgroundColor: 'rgba(35, 131, 226, 0.1)',
-                      color: '#0B6ECA'
+                      fontSize: '11px',
+                      color: 'var(--ink-secondary)',
+                      fontWeight: 500,
+                      backgroundColor: 'var(--background)',
+                      border: '1px solid var(--ink-border)',
+                      padding: '2px 8px',
+                      borderRadius: '9999px'
                     }}
                   >
-                    Recommended
+                    Sync
                   </span>
                 </div>
                 <p
                   style={{
-                    margin: '3px 0 0 0',
-                    fontSize: '12px',
-                    color: '#6A625A',
+                    margin: '4px 0 0 0',
+                    fontSize: '12.5px',
+                    color: 'var(--ink-secondary)',
                     lineHeight: 1.45
                   }}
                 >
-                  Connect your Google account to restore your existing trees, active thoughts, and attention history from your other computer.
+                  Retrieve your saved attention trees, active branches, and history from another device.
                 </p>
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2px' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '2px' }}>
               <button
                 onClick={handleConnectAndRestore}
                 disabled={isConnecting || isRestoring}
                 style={{
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '7px 14px',
-                  borderRadius: '7px',
+                  padding: '7px 16px',
+                  borderRadius: '8px',
                   border: 'none',
-                  backgroundColor: '#181818',
-                  color: '#F5E6D8',
-                  fontSize: '12px',
+                  backgroundColor: 'var(--ink)',
+                  color: 'var(--background)',
+                  fontSize: '12.5px',
                   fontWeight: 550,
                   cursor: isConnecting || isRestoring ? 'wait' : 'pointer',
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.12)',
                   transition: 'opacity 120ms ease'
                 }}
                 onMouseEnter={(e) => {
-                  if (!isConnecting && !isRestoring) e.currentTarget.style.opacity = '0.9';
+                  if (!isConnecting && !isRestoring) e.currentTarget.style.opacity = '0.88';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.opacity = '1';
@@ -271,7 +292,7 @@ export const WelcomeCloudModal: React.FC<WelcomeCloudModalProps> = ({
                 {isConnecting || isRestoring ? (
                   <>
                     <RefreshCw size={13} className="animate-spin" />
-                    <span>{isConnecting ? 'Connecting Drive...' : 'Restoring Trees...'}</span>
+                    <span>{isConnecting ? 'Authorizing Drive...' : 'Restoring Trees...'}</span>
                   </>
                 ) : (
                   <>
@@ -283,74 +304,85 @@ export const WelcomeCloudModal: React.FC<WelcomeCloudModalProps> = ({
             </div>
           </div>
 
-          {/* Option B: Start Fresh */}
+          {/* Option 2: Start Fresh */}
           <div
             style={{
               padding: '16px 18px',
               borderRadius: '12px',
-              border: '1px solid rgba(0, 0, 0, 0.08)',
-              backgroundColor: '#FFFFFF',
+              border: '1px solid var(--ink-border)',
+              backgroundColor: 'var(--background-glass)',
               display: 'flex',
               flexDirection: 'column',
-              gap: '10px',
-              transition: 'all 140ms ease'
+              gap: '12px',
+              transition: 'border-color 150ms ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = 'var(--accent)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = 'var(--ink-border)';
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
               <div
                 style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '9px',
-                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '10px',
+                  backgroundColor: 'var(--background)',
+                  border: '1px solid var(--ink-border)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  flexShrink: 0
+                  flexShrink: 0,
+                  marginTop: '1px'
                 }}
               >
-                <Sparkles size={18} color="#6A625A" />
+                <HardDrive size={18} strokeWidth={1.6} />
               </div>
+
               <div style={{ flex: 1 }}>
-                <span style={{ fontSize: '14px', fontWeight: 600, color: '#181818' }}>
-                  Start Fresh
-                </span>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ink)' }}>
+                  Start with a Fresh Canvas
+                </div>
                 <p
                   style={{
-                    margin: '3px 0 0 0',
-                    fontSize: '12px',
-                    color: '#6A625A',
+                    margin: '4px 0 0 0',
+                    fontSize: '12.5px',
+                    color: 'var(--ink-secondary)',
                     lineHeight: 1.45
                   }}
                 >
-                  Begin a new, blank workspace on this machine. You can connect Google Drive anytime later in Preferences.
+                  Plant a brand new tree root on this machine. Cloud backup can be enabled anytime in Preferences.
                 </p>
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2px' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '2px' }}>
               <button
                 onClick={onStartFresh}
                 disabled={isConnecting || isRestoring}
                 style={{
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '7px 14px',
-                  borderRadius: '7px',
-                  border: '1px solid rgba(0, 0, 0, 0.12)',
-                  backgroundColor: '#FFFFFF',
-                  color: '#181818',
-                  fontSize: '12px',
+                  padding: '7px 16px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--ink-border)',
+                  backgroundColor: 'var(--background-card)',
+                  color: 'var(--ink)',
+                  fontSize: '12.5px',
                   fontWeight: 500,
                   cursor: isConnecting || isRestoring ? 'not-allowed' : 'pointer',
-                  transition: 'background-color 120ms ease'
+                  transition: 'background-color 120ms ease, border-color 120ms ease'
                 }}
                 onMouseEnter={(e) => {
-                  if (!isConnecting && !isRestoring) e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.04)';
+                  if (!isConnecting && !isRestoring) {
+                    e.currentTarget.style.backgroundColor = 'var(--dock-hover)';
+                  }
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#FFFFFF';
+                  e.currentTarget.style.backgroundColor = 'var(--background-card)';
                 }}
               >
                 <span>Start Fresh</span>
@@ -358,7 +390,7 @@ export const WelcomeCloudModal: React.FC<WelcomeCloudModalProps> = ({
             </div>
           </div>
 
-          {/* Error Message if any */}
+          {/* Error Message */}
           {errorMessage && (
             <div
               style={{
@@ -369,7 +401,7 @@ export const WelcomeCloudModal: React.FC<WelcomeCloudModalProps> = ({
                 borderRadius: '8px',
                 backgroundColor: 'rgba(239, 68, 68, 0.08)',
                 border: '1px solid rgba(239, 68, 68, 0.2)',
-                color: '#B91C1C',
+                color: '#EF4444',
                 fontSize: '12px',
                 lineHeight: 1.4
               }}
@@ -380,18 +412,22 @@ export const WelcomeCloudModal: React.FC<WelcomeCloudModalProps> = ({
           )}
         </div>
 
-        {/* Footer Note */}
+        {/* Footer */}
         <div
           style={{
-            padding: '12px 24px',
-            backgroundColor: '#FAF9F5',
-            borderTop: '1px solid rgba(0, 0, 0, 0.05)',
+            padding: '14px 28px',
+            backgroundColor: 'var(--background)',
+            borderTop: '1px solid var(--ink-border)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
             fontSize: '11px',
-            color: '#8C7A6B',
-            textAlign: 'center'
+            color: 'var(--ink-muted)'
           }}
         >
-          Cloud backups are end-to-end sandboxed inside your private Google Drive AppData folder.
+          <ShieldCheck size={13} style={{ flexShrink: 0 }} />
+          <span>Local-first SQLite • Cloud backups are sandboxed in your private Google Drive</span>
         </div>
       </div>
     </div>
