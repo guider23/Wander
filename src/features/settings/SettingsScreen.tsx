@@ -11,6 +11,9 @@ export const SettingsScreen: React.FC = () => {
   });
   const [loading, setLoading] = useState(true);
   const { showToast } = useUiStore();
+  const [gdriveStatus, setGdriveStatus] = useState<{ isConnected: boolean; email?: string; lastSyncAt?: string }>({ isConnected: false });
+  const [isConnectingGdrive, setIsConnectingGdrive] = useState(false);
+  const [isSyncingGdrive, setIsSyncingGdrive] = useState(false);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -18,6 +21,7 @@ export const SettingsScreen: React.FC = () => {
         const s = await api.settings.get();
         setSettings(s);
         applySettingsToDom(s);
+        api.gdrive.getStatus().then(setGdriveStatus).catch(() => {});
       } catch (err: any) {
         showToast('Failed to load settings');
       } finally {
@@ -42,39 +46,7 @@ export const SettingsScreen: React.FC = () => {
     } catch (err: any) {
       showToast('Failed to save settings');
     }
-  };
-
-  const handleExportData = async () => {
-    try {
-      const data = await api.data.export();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `attention-path-export-${new Date().toISOString().slice(0, 10)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast('Data exported successfully');
-    } catch (err: any) {
-      showToast('Failed to export data');
-    }
-  };
-
-  const handleImportData = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const parsed = JSON.parse(event.target?.result as string);
-        const res = await api.data.import(parsed);
-        showToast(`Imported ${res.importedTrees} trees, ${res.importedNodes} nodes`);
-      } catch (err: any) {
-        showToast('Failed to import JSON file');
-      }
-    };
-    reader.readAsText(file);
+    showToast('Preferences updated');
   };
 
   const handleDeleteAll = async () => {
@@ -164,21 +136,36 @@ export const SettingsScreen: React.FC = () => {
 
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '4px' }}>
             <button
-              onClick={handleExportData}
+              onClick={async () => {
+                try {
+                  const res = await api.data.createBackup();
+                  showToast(`Backup created: ${res.filename || 'wander-backup'}`);
+                } catch (err: any) {
+                  showToast(err.message || 'Failed to create backup');
+                }
+              }}
               style={{
                 padding: '8px 16px',
                 borderRadius: 'var(--radius)',
                 border: '1.5px solid var(--ink)',
-                backgroundColor: 'transparent',
-                color: 'var(--ink)',
+                backgroundColor: 'var(--ink)',
+                color: '#FAF0E6',
                 fontSize: '0.85rem',
-                fontWeight: 500
+                fontWeight: 600,
+                cursor: 'pointer'
               }}
             >
-              Export JSON
+              Get Backup
             </button>
 
-            <label
+            <button
+              onClick={async () => {
+                try {
+                  await api.data.openBackupsFolder();
+                } catch {
+                  showToast('Could not open backups folder');
+                }
+              }}
               style={{
                 padding: '8px 16px',
                 borderRadius: 'var(--radius)',
@@ -190,14 +177,8 @@ export const SettingsScreen: React.FC = () => {
                 cursor: 'pointer'
               }}
             >
-              Import JSON
-              <input
-                type="file"
-                accept=".json"
-                onChange={handleImportData}
-                style={{ display: 'none' }}
-              />
-            </label>
+              Backups Folder
+            </button>
 
             <button
               onClick={handleDeleteAll}
@@ -214,13 +195,130 @@ export const SettingsScreen: React.FC = () => {
               Delete All Data
             </button>
           </div>
+
+          {/* Google Drive Cloud Backup */}
+          <div style={{ marginTop: '12px', padding: '14px', borderRadius: 'var(--radius)', border: '1px solid var(--ink-border)', backgroundColor: 'var(--background-card)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--ink)' }}>Google Drive Cloud Backup</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--ink-muted)', marginTop: '2px' }}>
+                  {gdriveStatus.isConnected
+                    ? `Connected as ${gdriveStatus.email || 'Google Account'} • Sandboxed AppData folder`
+                    : 'Sync automated private snapshots to your personal Google Drive AppData folder.'}
+                </div>
+              </div>
+              {gdriveStatus.isConnected && (
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '3px 8px', borderRadius: '4px', backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#047857' }}>
+                  Connected
+                </span>
+              )}
+            </div>
+
+            <div style={{ marginTop: '12px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {gdriveStatus.isConnected ? (
+                <>
+                  <button
+                    onClick={async () => {
+                      setIsSyncingGdrive(true);
+                      try {
+                        const res = await api.gdrive.sync();
+                        if (res.success) {
+                          showToast('Cloud backup synced to Google Drive');
+                          const updated = await api.gdrive.getStatus();
+                          setGdriveStatus(updated);
+                        } else {
+                          showToast(res.error || 'Sync failed');
+                        }
+                      } catch (err: any) {
+                        showToast(err.message || 'Sync error');
+                      } finally {
+                        setIsSyncingGdrive(false);
+                      }
+                    }}
+                    disabled={isSyncingGdrive}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: 'var(--radius)',
+                      border: '1.5px solid var(--ink)',
+                      backgroundColor: 'transparent',
+                      color: 'var(--ink)',
+                      fontSize: '0.8rem',
+                      fontWeight: 500,
+                      cursor: isSyncingGdrive ? 'wait' : 'pointer'
+                    }}
+                  >
+                    {isSyncingGdrive ? 'Syncing...' : 'Sync Now'}
+                  </button>
+
+                  <button
+                    onClick={async () => {
+                      try {
+                        await api.gdrive.disconnect();
+                        setGdriveStatus({ isConnected: false });
+                        showToast('Google Drive disconnected');
+                      } catch {
+                        showToast('Failed to disconnect');
+                      }
+                    }}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: 'var(--radius)',
+                      border: '1px solid #B00020',
+                      backgroundColor: 'transparent',
+                      color: '#B00020',
+                      fontSize: '0.8rem',
+                      fontWeight: 500,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Disconnect
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={async () => {
+                    setIsConnectingGdrive(true);
+                    try {
+                      const res = await api.gdrive.connect();
+                      if (res.success) {
+                        setGdriveStatus({ isConnected: true, email: res.email });
+                        showToast(`Connected to Google Drive (${res.email || 'Account'})`);
+                        api.gdrive.sync().then(() => {
+                          api.gdrive.getStatus().then(setGdriveStatus);
+                        });
+                      } else {
+                        showToast(res.error || 'Connection canceled');
+                      }
+                    } catch (err: any) {
+                      showToast(err.message || 'Connection failed');
+                    } finally {
+                      setIsConnectingGdrive(false);
+                    }
+                  }}
+                  disabled={isConnectingGdrive}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: 'var(--radius)',
+                    border: '1.5px solid var(--ink)',
+                    backgroundColor: 'var(--ink)',
+                    color: '#FAF0E6',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    cursor: isConnectingGdrive ? 'wait' : 'pointer'
+                  }}
+                >
+                  {isConnectingGdrive ? 'Opening browser to connect...' : 'Connect Google Drive'}
+                </button>
+              )}
+            </div>
+          </div>
         </section>
 
         {/* About */}
         <section style={{ paddingTop: '16px', borderTop: '1px solid var(--ink-border)' }}>
-          <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--ink)' }}>Attention Path App</div>
+          <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--ink)' }}>Wander</div>
           <div style={{ fontSize: '0.8rem', color: 'var(--ink-muted)', marginTop: '2px' }}>
-            Version 1.0.0 (Windows Desktop V1) • Local-first SQLite
+            Version 1.0.4 • Local-first SQLite
           </div>
         </section>
       </div>

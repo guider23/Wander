@@ -4,17 +4,16 @@ import { getDatabase, closeDatabase } from './db/connection';
 import { ApplicationService } from './application/service';
 import { registerIpcHandlers } from './ipc/handlers';
 import { IPC_CHANNELS } from './ipc/channels';
+import { AppSettings } from '../src/domain/entities/types';
+import { DEFAULT_SETTINGS, SettingsRepository } from './db/repositories/settings-repository';
 
-// Ensure only one instance of Attention Path runs at a time
+// Ensure only one instance of Wander runs at a time
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 if (!gotSingleInstanceLock) {
-  console.log('Another instance of Attention Path is already running. Focusing primary instance.');
+  console.log('Another instance of Wander is already running. Focusing primary instance.');
   app.quit();
   process.exit(0);
 }
-
-// Prevent Windows file-lock contention on GPU shader disk cache
-app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
 
 let mainWindow: BrowserWindow | null = null;
 let appTray: Tray | null = null;
@@ -32,16 +31,54 @@ export function getMainWindow(): BrowserWindow | null {
   return mainWindow;
 }
 
-function createWindow(): BrowserWindow {
+let autoDockEnabled = true;
+let alwaysOnTopEnabled = true;
+let isWindowDocked = false;
+let isDockingInProgress = false;
+let dockTopmostTimer: NodeJS.Timeout | null = null;
+let currentSettingsRepo: SettingsRepository | null = null;
+
+export function updateWindowSettings(settings: AppSettings): void {
+  if (settings.autoDock !== undefined) {
+    autoDockEnabled = settings.autoDock !== false;
+  }
+  if (settings.alwaysOnTop !== undefined) {
+    alwaysOnTopEnabled = settings.alwaysOnTop !== false;
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      if (isWindowDocked) {
+        mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
+        mainWindow.moveTop();
+      } else {
+        mainWindow.setAlwaysOnTop(alwaysOnTopEnabled, 'floating');
+      }
+    }
+  }
+}
+
+function createWindow(settingsRepo?: SettingsRepository): BrowserWindow {
   Menu.setApplicationMenu(null);
 
-  let isDocked = false;
-  let isDockingInProgress = false;
-  let normalBounds = { width: 1150, height: 820, x: 0, y: 0 };
-  let autoDockEnabled = true;  // Enable auto-dock by default
+  if (settingsRepo) {
+    currentSettingsRepo = settingsRepo;
+  }
+  const initialSettings: AppSettings = currentSettingsRepo ? currentSettingsRepo.getSettings() : DEFAULT_SETTINGS;
+  autoDockEnabled = initialSettings.autoDock !== false;
+  alwaysOnTopEnabled = initialSettings.alwaysOnTop !== false;
+  isWindowDocked = false;
+  isDockingInProgress = false;
 
   const isMac = process.platform === 'darwin';
   const iconPath = path.join(__dirname, '../app-icon.png');
+
+  // Pre-calculate centered normal bounds on primary display so normalBounds is never (0,0)
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { x: pX, y: pY, width: pW, height: pH } = primaryDisplay.workArea;
+  let normalBounds = {
+    width: 1150,
+    height: 820,
+    x: Math.round(pX + (pW - 1150) / 2),
+    y: Math.round(pY + (pH - 820) / 2)
+  };
 
   const win = new BrowserWindow({
     width: 1150,
@@ -53,9 +90,9 @@ function createWindow(): BrowserWindow {
     backgroundColor: '#00000000',
     hasShadow: true,
     show: false,
-    alwaysOnTop: true,  // Keep window above all other apps
+    alwaysOnTop: alwaysOnTopEnabled,
     autoHideMenuBar: true,
-    title: 'Attention Path',
+    title: 'Wander',
     icon: iconPath,
     skipTaskbar: !isMac,
     webPreferences: {
@@ -93,21 +130,49 @@ function createWindow(): BrowserWindow {
 
   win.once('ready-to-show', () => {
     console.log('✓ ready-to-show event fired');
-    win.center();
-    normalBounds = win.getBounds();
-    console.log('✓ Window bounds:', normalBounds);
-    if (isMac && typeof win.setWindowButtonVisibility === 'function') {
-      win.setWindowButtonVisibility(false);
+
+    if (initialSettings.startDocked) {
+      // User preferred starting minimized directly as the edge dock
+      isWindowDocked = true;
+      const dockWidth = 60;
+      const dockHeight = 250;
+      const targetX = pX + pW - dockWidth;
+      const targetY = Math.max(pY, Math.min(pY + pH - dockHeight, Math.round(pY + pH / 2 - dockHeight / 2)));
+      win.setMovable(false);
+      win.setResizable(false);
+      win.setBounds({
+        x: targetX,
+        y: targetY,
+        width: dockWidth,
+        height: dockHeight
+      });
+      win.webContents.send('attention:dock-changed', true);
+      win.setAlwaysOnTop(true, 'screen-saver', 1);
+      win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+      win.showInactive();
+      win.moveTop();
+
+      if (!dockTopmostTimer) {
+        dockTopmostTimer = setInterval(() => {
+          if (isWindowDocked && win && !win.isDestroyed()) {
+            win.moveTop();
+          }
+        }, 1200);
+      }
+    } else {
+      win.center();
+      normalBounds = win.getBounds();
+      if (isMac && typeof win.setWindowButtonVisibility === 'function') {
+        win.setWindowButtonVisibility(false);
+      }
+      win.show();
+      win.focus();
+
+      // Maintain always on top if setting enabled (without dropping it)
+      if (alwaysOnTopEnabled) {
+        win.setAlwaysOnTop(true, 'floating');
+      }
     }
-    console.log('✓ Calling win.show()');
-    win.show();
-    console.log('✓ Calling win.focus()');
-    win.focus();
-    console.log('✓ Window visible:', win.isVisible(), 'minimized:', win.isMinimized());
-    
-    // Force window to front
-    win.setAlwaysOnTop(true);
-    win.setAlwaysOnTop(false);
 
     if (process.env.SCREENSHOT_MODE === '1') {
       autoDockEnabled = false;
@@ -135,7 +200,7 @@ function createWindow(): BrowserWindow {
 
   // Apple-inspired smooth minimize effect suctioning into the edge dock
   function dockToEdge() {
-    if (isDocked || isDockingInProgress || !win || win.isDestroyed()) return;
+    if (isWindowDocked || isDockingInProgress || !win || win.isDestroyed()) return;
     isDockingInProgress = true;
     
     // Only capture normalBounds if current window is in full normal mode
@@ -147,13 +212,15 @@ function createWindow(): BrowserWindow {
     // 1. Tell renderer to play the smooth Apple genie minimize animation
     win.webContents.send('attention:dock-start');
 
-    // 2. Wait 220ms for the suction animation to glide into the dock notch position
+    // 2. Wait 200ms for the suction animation to glide into the dock notch position
     setTimeout(() => {
       if (!win || win.isDestroyed()) {
         isDockingInProgress = false;
         return;
       }
-      const display = screen.getDisplayMatching(normalBounds);
+      // Determine target display: current window bounds or primary display
+      const currentBounds = win.getBounds();
+      const display = screen.getDisplayMatching(currentBounds) || screen.getPrimaryDisplay();
       const { x: dX, y: dY, width: dW, height: dH } = display.workArea;
 
       const dockWidth = 60;
@@ -169,20 +236,38 @@ function createWindow(): BrowserWindow {
           isDockingInProgress = false;
           return;
         }
-        isDocked = true;
+        isWindowDocked = true;
         isDockingInProgress = false;
-        win.setAlwaysOnTop(true, 'floating');
+
         win.setMovable(false);  // Lock dock position - prevent dragging
         win.setResizable(false);  // Prevent resizing
         win.setBackgroundColor('#00000000');  // Ensure transparent background
+
+        // Set bounds FIRST
         win.setBounds({
           x: targetX,
           y: targetY,
           width: dockWidth,
           height: dockHeight
         });
+
+        // Assert topmost priority AFTER setBounds so Windows SetWindowPos does NOT demote it
+        win.setAlwaysOnTop(true, 'screen-saver', 1);
+        win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+        win.showInactive();
+        win.moveTop();
+
         if (isMac && typeof win.setWindowButtonVisibility === 'function') {
           win.setWindowButtonVisibility(false);
+        }
+
+        // Maintain topmost presence above hardware-accelerated browsers like Brave, Chrome, Edge
+        if (!dockTopmostTimer) {
+          dockTopmostTimer = setInterval(() => {
+            if (isWindowDocked && win && !win.isDestroyed()) {
+              win.moveTop();
+            }
+          }, 1200);
         }
       }, 35);
     }, 200);
@@ -190,9 +275,14 @@ function createWindow(): BrowserWindow {
 
   function expandWindow() {
     if (!win || win.isDestroyed()) return;
-    isDocked = false;
+    isWindowDocked = false;
     isDockingInProgress = false;
-    win.setAlwaysOnTop(true);  // Keep on top even when expanded
+
+    if (dockTopmostTimer) {
+      clearInterval(dockTopmostTimer);
+      dockTopmostTimer = null;
+    }
+
     win.setMovable(true);  // Allow moving when expanded
     win.setResizable(true);  // Allow resizing when expanded
 
@@ -200,6 +290,13 @@ function createWindow(): BrowserWindow {
       ? normalBounds
       : { width: 1150, height: 820, x: normalBounds.x || 100, y: normalBounds.y || 100 };
     win.setBounds(targetBounds);
+
+    if (alwaysOnTopEnabled) {
+      win.setAlwaysOnTop(true, 'floating');
+    } else {
+      win.setAlwaysOnTop(false);
+    }
+
     if (isMac && typeof win.setWindowButtonVisibility === 'function') {
       win.setWindowButtonVisibility(false);
     }
@@ -238,26 +335,25 @@ function createWindow(): BrowserWindow {
     return true;
   });
 
-  ipcMain.handle('attention:toggle-auto-dock', (_e, enabled: boolean) => {
-    autoDockEnabled = enabled;
-    return autoDockEnabled;
-  });
-
   // Auto-dock when clicking outside the window (blur event)
   let blurTimeout: NodeJS.Timeout | null = null;
   win.on('blur', () => {
-    console.log('Window blur event fired. autoDockEnabled:', autoDockEnabled, 'isDocked:', isDocked, 'isDockingInProgress:', isDockingInProgress);
-    
+    if (isWindowDocked) {
+      // Re-assert topmost when blurred so clicking on Brave/Chrome never hides the side dock
+      win.setAlwaysOnTop(true, 'screen-saver', 1);
+      win.moveTop();
+      return;
+    }
+
     // Clear any existing timeout
     if (blurTimeout) clearTimeout(blurTimeout);
     
     // Use a small delay to ensure the blur is intentional (not just a brief focus change)
     blurTimeout = setTimeout(() => {
-      if (autoDockEnabled && !isDocked && !isDockingInProgress) {
-        console.log('Auto-docking to edge...');
+      if (autoDockEnabled && !isWindowDocked && !isDockingInProgress) {
         dockToEdge();
       }
-    }, 100);
+    }, 120);
   });
 
   // Cancel auto-dock if window regains focus quickly
@@ -269,11 +365,15 @@ function createWindow(): BrowserWindow {
   });
 
   win.on('closed', () => {
+    if (dockTopmostTimer) {
+      clearInterval(dockTopmostTimer);
+      dockTopmostTimer = null;
+    }
     mainWindow = null;
   });
 
   // System Tray Setup
-  setupSystemTray(win, { dockToEdge, expandWindow, isDocked: () => isDocked });
+  setupSystemTray(win, { dockToEdge, expandWindow, isDocked: () => isWindowDocked });
 
   return win;
 }
@@ -304,7 +404,7 @@ function setupSystemTray(
     const loginSettings = app.getLoginItemSettings();
     const contextMenu = Menu.buildFromTemplate([
       {
-        label: 'Attention Path (Running in Background)',
+        label: 'Wander (Running in Background)',
         enabled: false
       },
       { type: 'separator' },
@@ -337,7 +437,7 @@ function setupSystemTray(
       },
       { type: 'separator' },
       {
-        label: 'Quit Attention Path',
+        label: 'Quit Wander',
         click: () => {
           isQuitting = true;
           app.quit();
@@ -389,18 +489,21 @@ app.whenReady().then(() => {
 
   const userDataPath = app.getPath('userData');
   const db = getDatabase(userDataPath);
-  const appService = new ApplicationService(db);
+  const appService = new ApplicationService(db, userDataPath);
+
+  // Backup recovery check: restore data if original DB was missing or lost
+  appService.restoreFromBackupIfDbMissing();
 
   // Crash recovery check: flag any unclosed sessions from previous crash
   appService.recoverInterruptedSessions();
 
   registerIpcHandlers(appService);
 
-  mainWindow = createWindow();
+  mainWindow = createWindow(appService.settingsRepo);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      mainWindow = createWindow();
+      mainWindow = createWindow(appService.settingsRepo);
     } else if (mainWindow) {
       mainWindow.show();
       mainWindow.focus();

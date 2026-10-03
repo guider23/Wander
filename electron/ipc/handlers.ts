@@ -1,8 +1,11 @@
 import { app, ipcMain, shell } from 'electron';
+import path from 'path';
+import fs from 'fs';
 import { z } from 'zod';
 import { IPC_CHANNELS } from './channels';
 import { ApplicationService } from '../application/service';
 import { autoUpdater } from '../updater/autoUpdater';
+import { updateWindowSettings } from '../main';
 
 export function registerIpcHandlers(service: ApplicationService): void {
   ipcMain.handle(IPC_CHANNELS.START_WORK, async (_event, payload) => {
@@ -103,9 +106,12 @@ export function registerIpcHandlers(service: ApplicationService): void {
   });
 
   ipcMain.handle(IPC_CHANNELS.DELETE_NODE, async (_event, payload) => {
-    const schema = z.object({ nodeId: z.string().uuid() });
+    const schema = z.object({
+      nodeId: z.string().uuid(),
+      preferredFallbackNodeId: z.string().uuid().optional()
+    });
     const validated = schema.parse(payload);
-    service.softDeleteNode(validated.nodeId);
+    service.softDeleteNode(validated.nodeId, validated.preferredFallbackNodeId);
     return { success: true };
   });
 
@@ -179,7 +185,9 @@ export function registerIpcHandlers(service: ApplicationService): void {
   });
 
   ipcMain.handle(IPC_CHANNELS.SAVE_SETTINGS, async (_event, payload) => {
-    return service.settingsRepo.saveSettings(payload);
+    const updated = service.settingsRepo.saveSettings(payload);
+    updateWindowSettings(updated);
+    return updated;
   });
 
   ipcMain.handle(IPC_CHANNELS.EXPORT_DATA, async () => {
@@ -193,5 +201,63 @@ export function registerIpcHandlers(service: ApplicationService): void {
   ipcMain.handle(IPC_CHANNELS.DELETE_ALL_DATA, async () => {
     service.deleteAllData();
     return { success: true };
+  });
+
+  ipcMain.handle(IPC_CHANNELS.CREATE_BACKUP, async () => {
+    const result = service.createBackupSnapshot('manual');
+    const targetFile = result.sqlitePath || result.jsonPath;
+    if (targetFile && fs.existsSync(targetFile)) {
+      shell.showItemInFolder(targetFile);
+    }
+    return {
+      success: true,
+      filename: result.filename,
+      backupPath: targetFile
+    };
+  });
+
+  ipcMain.handle(IPC_CHANNELS.OPEN_BACKUPS_FOLDER, async () => {
+    const backupsDir = path.join(service.userDataPath || path.join(process.cwd(), '.data'), 'backups');
+    if (!fs.existsSync(backupsDir)) {
+      fs.mkdirSync(backupsDir, { recursive: true });
+    }
+    await shell.openPath(backupsDir);
+    return { success: true, backupsDir };
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GDRIVE_CONNECT, async () => {
+    return service.googleDrive.connect();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GDRIVE_DISCONNECT, async () => {
+    return service.googleDrive.disconnect();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GDRIVE_STATUS, async () => {
+    return service.googleDrive.getStatus();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GDRIVE_SYNC, async () => {
+    const backup = service.createBackupSnapshot('manual');
+    const targetFile = backup.sqlitePath || backup.jsonPath;
+    if (!targetFile) return { success: false, error: 'No backup file generated' };
+    const uploadResult = await service.googleDrive.uploadBackupFile(targetFile);
+    return {
+      success: uploadResult.success,
+      filename: uploadResult.filename,
+      error: uploadResult.error
+    };
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GDRIVE_LIST, async () => {
+    return service.googleDrive.listCloudBackups();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GDRIVE_RESTORE_LATEST, async (_event, fileId?: string) => {
+    return service.restoreFromCloudBackup(fileId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.GDRIVE_CHECK_BACKUPS, async () => {
+    return service.googleDrive.getLatestCloudBackup();
   });
 }

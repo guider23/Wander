@@ -63,12 +63,12 @@ export const UndoNotification: React.FC<UndoNotificationProps> = ({ action, onDi
         alignItems: 'center',
         gap: '12px',
         padding: '8px 14px',
-        backgroundColor: 'rgba(255, 255, 255, 0.94)',
+        backgroundColor: 'var(--background-glass)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
-        border: '1px solid rgba(216, 199, 184, 0.85)',
+        border: '1px solid var(--dock-border)',
         borderRadius: '12px',
-        boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04)',
+        boxShadow: 'var(--shadow-bubble)',
         animation: 'notionFadeIn 160ms cubic-bezier(0.16, 1, 0.3, 1)',
         overflow: 'hidden',
         minWidth: '280px',
@@ -85,7 +85,7 @@ export const UndoNotification: React.FC<UndoNotificationProps> = ({ action, onDi
           left: 0,
           height: '2.5px',
           width: `${progress}%`,
-          backgroundColor: '#C49B71',
+          backgroundColor: 'var(--accent)',
           transition: 'width 60ms linear',
           opacity: 0.85
         }}
@@ -97,7 +97,7 @@ export const UndoNotification: React.FC<UndoNotificationProps> = ({ action, onDi
           style={{
             fontSize: '12px',
             fontWeight: 500,
-            color: '#181818',
+            color: 'var(--ink)',
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -110,7 +110,7 @@ export const UndoNotification: React.FC<UndoNotificationProps> = ({ action, onDi
           <span
             style={{
               fontSize: '11px',
-              color: '#78716C',
+              color: 'var(--ink-secondary)',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis'
@@ -135,8 +135,8 @@ export const UndoNotification: React.FC<UndoNotificationProps> = ({ action, onDi
           alignItems: 'center',
           gap: '5px',
           padding: '4px 10px',
-          backgroundColor: '#181818',
-          color: '#F5E6D8',
+          backgroundColor: 'var(--accent)',
+          color: 'var(--background-canvas)',
           border: 'none',
           borderRadius: '7px',
           fontSize: '11.5px',
@@ -147,11 +147,9 @@ export const UndoNotification: React.FC<UndoNotificationProps> = ({ action, onDi
           boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)'
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = '#2B2623';
           e.currentTarget.style.transform = 'scale(1.03)';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = '#181818';
           e.currentTarget.style.transform = 'scale(1)';
         }}
         title={`Undo action (${shortcutHint})`}
@@ -161,8 +159,8 @@ export const UndoNotification: React.FC<UndoNotificationProps> = ({ action, onDi
         <span
           style={{
             fontSize: '10px',
-            opacity: 0.7,
-            backgroundColor: 'rgba(255, 255, 255, 0.18)',
+            opacity: 0.8,
+            backgroundColor: 'rgba(0, 0, 0, 0.15)',
             padding: '1px 4px',
             borderRadius: '4px',
             marginLeft: '2px',
@@ -179,7 +177,7 @@ export const UndoNotification: React.FC<UndoNotificationProps> = ({ action, onDi
         style={{
           background: 'none',
           border: 'none',
-          color: '#8A827B',
+          color: 'var(--ink-muted)',
           cursor: 'pointer',
           padding: '2px',
           display: 'flex',
@@ -189,10 +187,10 @@ export const UndoNotification: React.FC<UndoNotificationProps> = ({ action, onDi
           transition: 'color 120ms ease'
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.color = '#181818';
+          e.currentTarget.style.color = 'var(--ink)';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.color = '#8A827B';
+          e.currentTarget.style.color = 'var(--ink-muted)';
         }}
         aria-label="Dismiss undo notification"
       >

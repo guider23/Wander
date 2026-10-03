@@ -4,7 +4,11 @@ import { AppSettings } from '../../../src/domain/entities/types';
 export const DEFAULT_SETTINGS: AppSettings = {
   timeFormat: '12h',
   reducedMotion: false,
-  highContrast: false
+  highContrast: false,
+  continuumMode: 'auto',
+  autoDock: true,
+  alwaysOnTop: true,
+  startDocked: false
 };
 
 export class SettingsRepository {

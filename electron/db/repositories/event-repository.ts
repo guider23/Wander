@@ -9,6 +9,8 @@ export class EventRepository {
     return row.nextSeq;
   }
 
+  public onEventAppended?: (event: DomainEvent) => void;
+
   append(event: Omit<DomainEvent, 'sequence'> & { sequence?: number }): DomainEvent {
     const sequence = event.sequence ?? this.getNextSequence();
     const fullEvent: DomainEvent = {
@@ -33,7 +35,45 @@ export class EventRepository {
       fullEvent.schemaVersion
     );
 
+    try {
+      this.onEventAppended?.(fullEvent);
+    } catch (_) {}
+
     return fullEvent;
+  }
+
+  save(event: DomainEvent): void {
+    const sequence = event.sequence ?? this.getNextSequence();
+    const payloadStr = typeof event.payload === 'string'
+      ? event.payload
+      : JSON.stringify(event.payload ?? {});
+
+    this.db.prepare(`
+      INSERT INTO events (
+        id, type, tree_id, session_id, node_id, occurred_at, created_at, sequence, payload_json, schema_version
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        type = excluded.type,
+        tree_id = excluded.tree_id,
+        session_id = excluded.session_id,
+        node_id = excluded.node_id,
+        occurred_at = excluded.occurred_at,
+        created_at = excluded.created_at,
+        sequence = excluded.sequence,
+        payload_json = excluded.payload_json,
+        schema_version = excluded.schema_version
+    `).run(
+      event.id,
+      event.type,
+      event.treeId ?? null,
+      event.sessionId ?? null,
+      event.nodeId ?? null,
+      event.occurredAt,
+      event.createdAt,
+      sequence,
+      payloadStr,
+      event.schemaVersion ?? 1
+    );
   }
 
   listAll(): DomainEvent[] {

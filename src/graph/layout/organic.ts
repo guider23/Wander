@@ -9,6 +9,7 @@ export interface OrganicNodePoint {
   labelAlign: 'left' | 'right';
   subtitle?: string;
   durationLabel?: string;
+  isTrunk?: boolean;
 }
 
 export interface OrganicEdgePath {
@@ -16,7 +17,9 @@ export interface OrganicEdgePath {
   pathD: string;
   isDashed: boolean;
   isDestabilized?: boolean;
+  isTrunk?: boolean;
   status: 'ACTIVE' | 'ONGOING' | 'PAUSED' | 'COMPLETED' | 'ABANDONED';
+  depth?: number;
 }
 
 export interface OrganicTreeLayout {
@@ -161,6 +164,7 @@ export function layoutOrganicTree(
 
   // Identify nodes that belong to the main trunk spine
   const trunkNodes: Node[] = [rootNode];
+  const visitedTrunkIds = new Set<string>([rootNode.id]);
   let curr = rootNode;
   while (true) {
     const children = childrenMap.get(curr.id) || [];
@@ -171,7 +175,8 @@ export function layoutOrganicTree(
     // Any additional steps added to the same parent node branch out organically
     const nextTrunkNode = workSteps[0];
 
-    if (nextTrunkNode) {
+    if (nextTrunkNode && !visitedTrunkIds.has(nextTrunkNode.id)) {
+      visitedTrunkIds.add(nextTrunkNode.id);
       trunkNodes.push(nextTrunkNode);
       curr = nextTrunkNode;
     } else {
@@ -182,7 +187,7 @@ export function layoutOrganicTree(
   // Position trunk nodes along the undulating spine
   // In the reference sketch, the trunk spans gracefully from bottom to top
   const positions = new Map<string, { x: number; y: number; side: number; isTrunk: boolean }>();
-  const parentLinks = new Map<string, { parentId: string; side: number; isStepCascade: boolean; sproutX?: number; sproutY?: number }>();
+  const parentLinks = new Map<string, { parentId: string; side: number; isStepCascade: boolean; sproutX?: number; sproutY?: number; depth?: number }>();
 
   const trunkCount = trunkNodes.length;
   trunkNodes.forEach((node, idx) => {
@@ -223,19 +228,26 @@ export function layoutOrganicTree(
       pathD: trunkPathD,
       isDashed: isTrunkDestabilized,
       isDestabilized: isTrunkDestabilized,
-      status: rootNode.status
+      isTrunk: true,
+      status: rootNode.status,
+      depth: 0
     }
   ];
 
   // Layout Branches & Thoughts using Botanical Peeling Physics & Fanning
-  const layoutBranchesAndThoughts = (parentNode: Node) => {
+  const visitedBranchIds = new Set<string>([rootNode.id]);
+
+  const layoutBranchesAndThoughts = (parentNode: Node, currentDepth: number = 1) => {
     const parentPos = positions.get(parentNode.id);
     if (!parentPos) return;
 
     const allChildren = childrenMap.get(parentNode.id) || [];
-    const unplacedChildren = allChildren.filter((c) => !positions.has(c.id));
+    const unplacedChildren = allChildren.filter(
+      (c) => !positions.has(c.id) && !visitedBranchIds.has(c.id)
+    );
     if (unplacedChildren.length === 0) return;
 
+    unplacedChildren.forEach((child) => visitedBranchIds.add(child.id));
     unplacedChildren.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
     if (parentPos.isTrunk) {
@@ -282,11 +294,12 @@ export function layoutOrganicTree(
           sproutX: trunkSproutPt.x,
           sproutY: trunkSproutPt.y,
           side,
-          isStepCascade: false
+          isStepCascade: false,
+          depth: 1
         });
 
         // Recursively layout all sub-branches of this child
-        layoutBranchesAndThoughts(child);
+        layoutBranchesAndThoughts(child, 2);
       });
     } else {
       // Branch Node: All child thoughts and steps sprout directly from this branch node!
@@ -331,11 +344,12 @@ export function layoutOrganicTree(
         parentLinks.set(child.id, {
           parentId: parentNode.id,
           side: branchSide,
-          isStepCascade
+          isStepCascade,
+          depth: currentDepth
         });
 
         // Recursively layout sub-children of this branch
-        layoutBranchesAndThoughts(child);
+        layoutBranchesAndThoughts(child, currentDepth + 1);
       });
     }
   };
@@ -405,7 +419,7 @@ export function layoutOrganicTree(
   }
 
   // Construct Final Branch Curves Using Botanical Physics
-  parentLinks.forEach(({ parentId, side, isStepCascade, sproutX, sproutY }, childId) => {
+  parentLinks.forEach(({ parentId, side, isStepCascade, sproutX, sproutY, depth }, childId) => {
     const childNode = nodeMap.get(childId);
     const childPos = positions.get(childId);
     const parentPos = positions.get(parentId);
@@ -427,7 +441,8 @@ export function layoutOrganicTree(
       pathD,
       isDashed: isAbandoned,
       isDestabilized: isAbandoned,
-      status: childNode.status
+      status: childNode.status,
+      depth: Math.min(depth ?? 1, 10)
     });
   });
 
@@ -467,7 +482,8 @@ export function layoutOrganicTree(
       labelY,
       labelAlign,
       subtitle,
-      durationLabel
+      durationLabel,
+      isTrunk: pos.isTrunk
     });
 
     minX = Math.min(minX, pos.x - 240);

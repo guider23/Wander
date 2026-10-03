@@ -32,7 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTreeTitle, activeStatus 
       <div>
         <div style={{ marginBottom: '28px', paddingLeft: '8px' }}>
           <h1 style={{ fontSize: '1.05rem', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--ink)' }}>
-            Attention Path
+            Wander
           </h1>
           <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginTop: '2px' }}>
             Journal of attention

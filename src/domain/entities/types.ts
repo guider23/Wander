@@ -52,4 +52,8 @@ export interface AppSettings {
   timeFormat: '12h' | '24h';
   reducedMotion: boolean;
   highContrast: boolean;
+  continuumMode?: 'auto' | 'always' | 'never';
+  autoDock?: boolean;
+  alwaysOnTop?: boolean;
+  startDocked?: boolean;
 }

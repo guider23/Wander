@@ -1,5 +1,6 @@
 :root {
   --background: #F5E6D8;
+  --background-canvas: #F5E6D8;
   --background-card: #FFFFFF;
   --background-glass: rgba(255, 255, 255, 0.82);
   --background-input: #FFFFFF;
@@ -9,6 +10,9 @@
   --ink-border: rgba(0, 0, 0, 0.08);
   --ink-active: #0D0D0D;
   --accent: #2B2623;
+  --dock-border: rgba(216, 199, 184, 0.7);
+  --dock-hover: rgba(24, 24, 24, 0.08);
+  --watermark-stroke: 0.8px rgba(165, 142, 122, 0.10);
   --radius-sm: 6px;
   --radius: 12px;
   --radius-full: 9999px;
@@ -16,6 +20,31 @@
   --shadow-dock: 0 12px 36px rgba(24, 24, 24, 0.08), 0 2px 8px rgba(24, 24, 24, 0.04);
   --shadow-bubble: 0 8px 24px rgba(24, 24, 24, 0.12), 0 2px 6px rgba(24, 24, 24, 0.06);
   --shadow-notion: 0 24px 64px -12px rgba(0, 0, 0, 0.18), 0 4px 16px rgba(0, 0, 0, 0.05);
+  --theme-transition: background-color 2200ms cubic-bezier(0.16, 1, 0.3, 1),
+                      background 2200ms cubic-bezier(0.16, 1, 0.3, 1),
+                      color 1600ms ease,
+                      border-color 1600ms ease,
+                      box-shadow 1600ms ease;
+}
+
+[data-density="continuum"] {
+  --background: #030509;
+  --background-canvas: #030509;
+  --background-card: rgba(10, 14, 22, 0.72);
+  --background-glass: rgba(10, 14, 22, 0.75);
+  --background-input: #070B14;
+  --ink: #F1F5F9;
+  --ink-secondary: #94A3B8;
+  --ink-muted: #64748B;
+  --ink-border: rgba(56, 189, 248, 0.18);
+  --ink-active: #FFFFFF;
+  --accent: #38BDF8;
+  --dock-border: rgba(56, 189, 248, 0.2);
+  --dock-hover: rgba(56, 189, 248, 0.1);
+  --watermark-stroke: 0.8px rgba(56, 189, 248, 0.08);
+  --shadow-dock: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 16px rgba(56, 189, 248, 0.1);
+  --shadow-bubble: 0 8px 30px rgba(0, 0, 0, 0.65), 0 0 12px rgba(56, 189, 248, 0.12);
+  --shadow-notion: 0 24px 64px -12px rgba(0, 0, 0, 0.8), 0 0 20px rgba(56, 189, 248, 0.1);
 }
 
 /* Absolute scrollbar elimination across all HTML elements and pseudo-elements */
@@ -249,3 +278,42 @@ input, textarea {
     transform: translateX(0) scale(1);
   }
 }
+
+/* Continuum Cosmic Bioluminescent Living Animations (Minimal & Subtle) */
+@keyframes continuumGlowPulse {
+  0%, 100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.65;
+  }
+}
+
+@keyframes continuumAuraRing {
+  0% {
+    r: 6px;
+    opacity: 0.6;
+  }
+  60% {
+    r: 10px;
+    opacity: 0.15;
+  }
+  100% {
+    r: 13px;
+    opacity: 0;
+  }
+}
+
+@keyframes continuumDrift {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -40;
+  }
+}
+
+.continuum-glowing-edge {
+  animation: continuumGlowPulse 4s ease-in-out infinite;
+}
+

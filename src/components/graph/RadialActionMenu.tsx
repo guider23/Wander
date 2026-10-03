@@ -15,6 +15,10 @@ interface RadialActionMenuProps {
   x: number;
   y: number;
   showShortcuts?: boolean;
+  isContinuumMode?: boolean;
+  isBranchLimitReached?: boolean;
+  isParentTaskFinished?: boolean;
+  hasChildren?: boolean;
   onSelectAction: (actionId: RadialAction['id']) => void;
   onClose: () => void;
 }
@@ -33,6 +37,10 @@ export const RadialActionMenu: React.FC<RadialActionMenuProps> = ({
   x,
   y,
   showShortcuts = false,
+  isContinuumMode = false,
+  isBranchLimitReached = false,
+  isParentTaskFinished = false,
+  hasChildren = false,
   onSelectAction,
   onClose
 }) => {
@@ -226,7 +234,9 @@ export const RadialActionMenu: React.FC<RadialActionMenuProps> = ({
             width: `${radius * 2}px`,
             height: `${radius * 2}px`,
             borderRadius: '50%',
-            border: '1px dashed rgba(24, 24, 24, 0.16)',
+            border: isContinuumMode
+              ? '1px dashed rgba(56, 189, 248, 0.35)'
+              : '1px dashed rgba(24, 24, 24, 0.16)',
             pointerEvents: 'none',
             animation: 'notionFadeIn 180ms ease-out'
           }}
@@ -240,15 +250,41 @@ export const RadialActionMenu: React.FC<RadialActionMenuProps> = ({
             width: '20px',
             height: '20px',
             borderRadius: '50%',
-            backgroundColor: 'rgba(24, 24, 24, 0.08)',
-            border: '1.5px solid #181818',
+            backgroundColor: isContinuumMode
+              ? 'rgba(56, 189, 248, 0.18)'
+              : 'rgba(24, 24, 24, 0.08)',
+            border: isContinuumMode ? '1.5px solid #38BDF8' : '1.5px solid #181818',
             pointerEvents: 'none'
           }}
         />
 
-        {/* Pinterest Action Bubbles */}
+        {/* Action Bubbles */}
         {bubblePositions.map(({ action, bx, by }, index) => {
           const isHovered = hoveredActionId === action.id;
+          const isBranchAction = action.id === 'step' || action.id === 'thought';
+          const isDeleteBlocked = action.id === 'delete' && hasChildren;
+          const isActionBlocked = (isBranchAction && (isParentTaskFinished || isBranchLimitReached)) || isDeleteBlocked;
+
+          let bubbleBg = isHovered ? action.color : '#FAF0E6';
+          let bubbleColor = isHovered ? '#F5E6D8' : action.color;
+          let bubbleBorder = `1.5px solid ${isHovered ? action.color : 'rgba(24, 24, 24, 0.25)'}`;
+
+          if (isContinuumMode) {
+            if (isHovered) {
+              if (action.id === 'abandon' || action.id === 'delete') {
+                bubbleBg = '#BE123C';
+                bubbleBorder = '1.5px solid #FB7185';
+              } else {
+                bubbleBg = '#0284C7';
+                bubbleBorder = '1.5px solid #38BDF8';
+              }
+              bubbleColor = '#FFFFFF';
+            } else {
+              bubbleBg = isActionBlocked ? 'rgba(15, 23, 42, 0.75)' : '#090D16';
+              bubbleColor = isActionBlocked ? '#64748B' : '#F0F9FF';
+              bubbleBorder = `1.5px solid ${isActionBlocked ? 'rgba(100, 116, 139, 0.3)' : 'rgba(56, 189, 248, 0.45)'}`;
+            }
+          }
 
           return (
             <div
@@ -274,19 +310,24 @@ export const RadialActionMenu: React.FC<RadialActionMenuProps> = ({
                   width: '38px',
                   height: '38px',
                   borderRadius: '50%',
-                  backgroundColor: isHovered ? action.color : '#FAF0E6',
-                  color: isHovered ? '#F5E6D8' : action.color,
-                  border: `1.5px solid ${isHovered ? action.color : 'rgba(24, 24, 24, 0.25)'}`,
-                  boxShadow: isHovered
+                  backgroundColor: bubbleBg,
+                  color: bubbleColor,
+                  border: bubbleBorder,
+                  boxShadow: isContinuumMode
+                    ? isHovered
+                      ? '0 8px 24px rgba(0, 0, 0, 0.7), 0 0 0 3px rgba(56, 189, 248, 0.3)'
+                      : '0 4px 12px rgba(0, 0, 0, 0.5)'
+                    : isHovered
                     ? '0 6px 16px rgba(0, 0, 0, 0.18), 0 0 0 3px rgba(24, 24, 24, 0.12)'
                     : '0 2px 8px rgba(0, 0, 0, 0.08)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  cursor: 'pointer',
+                  cursor: isActionBlocked ? 'not-allowed' : 'pointer',
                   position: 'relative',
                   transform: `scale(${isHovered ? 1.35 : 1})`,
-                  transition: 'transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1), background-color 140ms ease, color 140ms ease, box-shadow 180ms ease',
+                  opacity: isActionBlocked ? 0.6 : 1,
+                  transition: 'transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1), background-color 140ms ease, color 140ms ease, box-shadow 180ms ease, opacity 140ms ease',
                   animation: `bubblePop 220ms cubic-bezier(0.34, 1.56, 0.64, 1) ${index * 25}ms backwards`
                 }}
                 title={showShortcuts ? `${action.label} (${action.shortcut})` : action.label}
@@ -304,8 +345,13 @@ export const RadialActionMenu: React.FC<RadialActionMenuProps> = ({
                       width: '15px',
                       height: '15px',
                       borderRadius: '50%',
-                      backgroundColor: isHovered ? '#FAF0E6' : '#181818',
-                      color: isHovered ? '#181818' : '#FAF0E6',
+                      backgroundColor: isContinuumMode
+                        ? isHovered ? '#FFFFFF' : '#0B132B'
+                        : isHovered ? '#FAF0E6' : '#181818',
+                      color: isContinuumMode
+                        ? isHovered ? '#0B132B' : '#38BDF8'
+                        : isHovered ? '#181818' : '#FAF0E6',
+                      border: isContinuumMode ? '1px solid rgba(56, 189, 248, 0.5)' : undefined,
                       fontSize: '9.5px',
                       fontWeight: 700,
                       display: 'flex',
@@ -330,21 +376,32 @@ export const RadialActionMenu: React.FC<RadialActionMenuProps> = ({
             top: `${radius + 24}px`,
             left: '50%',
             transform: 'translateX(-50%)',
-            backgroundColor: 'rgba(24, 24, 24, 0.94)',
-            color: '#FAF0E6',
+            backgroundColor: isContinuumMode
+              ? 'rgba(7, 12, 20, 0.95)'
+              : 'rgba(24, 24, 24, 0.94)',
+            color: '#FFFFFF',
+            border: isContinuumMode ? '1px solid rgba(56, 189, 248, 0.35)' : undefined,
             fontSize: '11px',
             fontWeight: 500,
             padding: '3px 10px',
             borderRadius: '12px',
             whiteSpace: 'nowrap',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
             pointerEvents: 'none',
             letterSpacing: '0.01em',
             transition: 'opacity 120ms ease',
             opacity: activeAction ? 1 : 0.75
           }}
         >
-          {activeAction ? activeAction.label : node.title}
+          {activeAction
+            ? ((activeAction.id === 'step' || activeAction.id === 'thought') && isParentTaskFinished)
+              ? 'Main task completed. Press Ctrl+N for new work'
+              : ((activeAction.id === 'step' || activeAction.id === 'thought') && isBranchLimitReached)
+              ? 'Limit reached (3000). Complete main task first'
+              : (activeAction.id === 'delete' && hasChildren)
+              ? 'Cannot delete: node has extended branches'
+              : activeAction.label
+            : node.title}
         </div>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Search, Command, BookOpen, Lightbulb, CornerDownRight } from 'lucide-react';
+import { X, Search, Command } from 'lucide-react';
 import { formatShortcut } from '../../utils/platform';
 
 interface ShortcutGuideModalProps {
@@ -31,7 +31,6 @@ const getShortcuts = (): ShortcutItem[] => [
 ];
 
 export const ShortcutGuideModal: React.FC<ShortcutGuideModalProps> = ({ isOpen, onClose }) => {
-  const [activeTab, setActiveTab] = useState<'shortcuts' | 'guide'>('shortcuts');
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
@@ -97,7 +96,7 @@ export const ShortcutGuideModal: React.FC<ShortcutGuideModalProps> = ({ isOpen, 
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header Tabs: Clean Segmented Control matching SpotlightModal */}
+        {/* Header: Clean Notion / macOS Style Header */}
         <div
           style={{
             padding: '14px 18px',
@@ -109,57 +108,11 @@ export const ShortcutGuideModal: React.FC<ShortcutGuideModalProps> = ({ isOpen, 
             backgroundColor: '#FAFAF9'
           }}
         >
-          {/* Segmented Control */}
-          <div
-            style={{
-              display: 'flex',
-              backgroundColor: 'rgba(0, 0, 0, 0.05)',
-              padding: '2px',
-              borderRadius: '9px',
-              gap: '2px'
-            }}
-          >
-            <button
-              onClick={() => setActiveTab('shortcuts')}
-              style={{
-                fontSize: '12px',
-                fontWeight: activeTab === 'shortcuts' ? 600 : 450,
-                padding: '5px 13px',
-                borderRadius: '7px',
-                backgroundColor: activeTab === 'shortcuts' ? '#FFFFFF' : 'transparent',
-                color: activeTab === 'shortcuts' ? '#1A1A1A' : '#787774',
-                boxShadow: activeTab === 'shortcuts' ? '0 1px 3px rgba(0, 0, 0, 0.08), 0 0.5px 1px rgba(0, 0, 0, 0.04)' : 'none',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                cursor: 'pointer',
-                transition: 'all 120ms ease'
-              }}
-            >
-              <Command size={13} strokeWidth={2} />
-              <span>Shortcuts</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('guide')}
-              style={{
-                fontSize: '12px',
-                fontWeight: activeTab === 'guide' ? 600 : 450,
-                padding: '5px 13px',
-                borderRadius: '7px',
-                backgroundColor: activeTab === 'guide' ? '#FFFFFF' : 'transparent',
-                color: activeTab === 'guide' ? '#1A1A1A' : '#787774',
-                boxShadow: activeTab === 'guide' ? '0 1px 3px rgba(0, 0, 0, 0.08), 0 0.5px 1px rgba(0, 0, 0, 0.04)' : 'none',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                cursor: 'pointer',
-                transition: 'all 120ms ease'
-              }}
-            >
-              <BookOpen size={13} strokeWidth={2} />
-              <span>Mental Model</span>
-            </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Command size={15} strokeWidth={2} style={{ color: '#1A1A1A' }} />
+            <span style={{ fontSize: '13px', fontWeight: 600, color: '#1A1A1A' }}>
+              Keyboard Shortcuts & Controls
+            </span>
           </div>
 
           <button
@@ -183,155 +136,89 @@ export const ShortcutGuideModal: React.FC<ShortcutGuideModalProps> = ({ isOpen, 
         </div>
 
         {/* Content Body */}
-        {activeTab === 'shortcuts' ? (
-          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-            {/* Search Input Bar (Matching Spotlight Search) */}
-            <div
-              style={{
-                padding: '12px 18px',
-                borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px'
-              }}
-            >
-              <Search size={15} color="#9B9A97" strokeWidth={2} />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search shortcuts or actions..."
-                style={{
-                  flex: 1,
-                  fontSize: '13px',
-                  color: '#1A1A1A',
-                  border: 'none',
-                  outline: 'none',
-                  backgroundColor: 'transparent'
-                }}
-              />
-            </div>
-
-            {/* Shortcuts List */}
-            <div
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+          {/* Search Input Bar (Matching Spotlight Search) */}
+          <div
+            style={{
+              padding: '12px 18px',
+              borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px'
+            }}
+          >
+            <Search size={15} color="#9B9A97" strokeWidth={2} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search shortcuts or actions..."
               style={{
                 flex: 1,
-                overflowY: 'auto',
-                padding: '10px 18px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '4px'
+                fontSize: '13px',
+                color: '#1A1A1A',
+                border: 'none',
+                outline: 'none',
+                backgroundColor: 'transparent'
               }}
-            >
-              {filteredShortcuts.map((sc) => (
-                <div
-                  key={sc.label}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '8px 10px',
-                    borderRadius: '8px',
-                    transition: 'background-color 100ms ease',
-                    cursor: 'default'
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.035)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                >
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <span style={{ fontSize: '12.5px', fontWeight: 550, color: '#1A1A1A' }}>
-                      {sc.label}
-                    </span>
-                    <span style={{ fontSize: '11px', color: '#787774' }}>
-                      {sc.description}
-                    </span>
-                  </div>
-
-                  <kbd
-                    style={{
-                      padding: '3px 8px',
-                      borderRadius: '6px',
-                      backgroundColor: 'rgba(0, 0, 0, 0.05)',
-                      border: '1px solid rgba(0, 0, 0, 0.08)',
-                      fontFamily: 'monospace',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      color: '#2A2A2A',
-                      whiteSpace: 'nowrap',
-                      marginLeft: '14px'
-                    }}
-                  >
-                    {sc.keys}
-                  </kbd>
-                </div>
-              ))}
-            </div>
+            />
           </div>
-        ) : (
-          /* Mental Model & Botanical Tree Guide */
+
+          {/* Shortcuts List */}
           <div
             style={{
               flex: 1,
               overflowY: 'auto',
-              padding: '20px 22px',
+              padding: '10px 18px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '16px'
+              gap: '4px'
             }}
           >
-            {/* Thought vs Step Concept Cards */}
-            <div
-              style={{
-                padding: '13px 15px',
-                backgroundColor: 'rgba(0, 0, 0, 0.02)',
-                borderRadius: '10px',
-                border: '1px solid rgba(0, 0, 0, 0.06)'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '7px', fontWeight: 600, fontSize: '13px', color: '#1A1A1A' }}>
-                <Lightbulb size={14} strokeWidth={2} color="#C85A2B" />
-                <span>Thought (Curiosity Branch)</span>
-              </div>
-              <p style={{ fontSize: '12px', color: '#5A5853', marginTop: '5px', lineHeight: 1.5 }}>
-                An idea or question that sprouts <strong>without breaking focus</strong>. It branches outward at your current moment in time, recording your human curiosity while keeping your main work active.
-              </p>
-            </div>
+            {filteredShortcuts.map((sc) => (
+              <div
+                key={sc.label}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '8px 10px',
+                  borderRadius: '8px',
+                  transition: 'background-color 100ms ease',
+                  cursor: 'default'
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.035)')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <span style={{ fontSize: '12.5px', fontWeight: 550, color: '#1A1A1A' }}>
+                    {sc.label}
+                  </span>
+                  <span style={{ fontSize: '11px', color: '#787774' }}>
+                    {sc.description}
+                  </span>
+                </div>
 
-            <div
-              style={{
-                padding: '13px 15px',
-                backgroundColor: 'rgba(0, 0, 0, 0.02)',
-                borderRadius: '10px',
-                border: '1px solid rgba(0, 0, 0, 0.06)'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '7px', fontWeight: 600, fontSize: '13px', color: '#1A1A1A' }}>
-                <CornerDownRight size={14} strokeWidth={2} color="#1A1A1A" />
-                <span>Step (Sequential Progress)</span>
+                <kbd
+                  style={{
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                    border: '1px solid rgba(0, 0, 0, 0.08)',
+                    fontFamily: 'monospace',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    color: '#2A2A2A',
+                    whiteSpace: 'nowrap',
+                    marginLeft: '14px'
+                  }}
+                >
+                  {sc.keys}
+                </kbd>
               </div>
-              <p style={{ fontSize: '12px', color: '#5A5853', marginTop: '5px', lineHeight: 1.5 }}>
-                The <strong>next concrete milestone you follow</strong> (e.g. <em>Outline &rarr; Draft &rarr; Ship</em>). It drives the center tree trunk upward as time advances.
-              </p>
-            </div>
-
-            {/* Natural Tree Principles */}
-            <div
-              style={{
-                padding: '13px 15px',
-                backgroundColor: 'rgba(0, 0, 0, 0.02)',
-                borderRadius: '10px',
-                border: '1px solid rgba(0, 0, 0, 0.06)'
-              }}
-            >
-              <div style={{ fontSize: '13px', fontWeight: 600, color: '#1A1A1A' }}>
-                Natural Tree Growth Principles
-              </div>
-              <p style={{ fontSize: '12px', color: '#5A5853', marginTop: '5px', lineHeight: 1.5 }}>
-                The center tree stem represents continuous elapsed focus time. Older branches stay at lower heights where they were formed, while new thoughts and steps sprout high at the active growing tip.
-              </p>
-            </div>
+            ))}
           </div>
-        )}
+        </div>
 
         {/* Footer */}
         <div
@@ -348,7 +235,7 @@ export const ShortcutGuideModal: React.FC<ShortcutGuideModalProps> = ({ isOpen, 
           }}
         >
           <span>Press <kbd style={{ padding: '2px 5px', borderRadius: '4px', backgroundColor: 'rgba(0, 0, 0, 0.05)', border: '1px solid rgba(0, 0, 0, 0.08)', fontFamily: 'inherit' }}>esc</kbd> to dismiss</span>
-          <span>Attention Path • Wander</span>
+          <span>Keyboard Shortcuts • Wander</span>
         </div>
       </div>
     </div>

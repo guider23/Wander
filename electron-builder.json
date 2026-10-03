@@ -1,6 +1,6 @@
 {
-  "appId": "com.google.deepmind.attentionpath",
-  "productName": "Attention Path",
+  "appId": "com.wander.app",
+  "productName": "Wander",
   "directories": {
     "output": "release"
   },
@@ -28,7 +28,7 @@
     "allowToChangeInstallationDirectory": false,
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
-    "shortcutName": "Attention Path"
+    "shortcutName": "Wander"
   },
   "mac": {
     "target": [
@@ -49,7 +49,7 @@
     "identity": null
   },
   "dmg": {
-    "title": "Attention Path ${version}",
+    "title": "Wander ${version}",
     "contents": [
       {
         "x": 130,

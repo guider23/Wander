@@ -26,8 +26,8 @@ export const attentionAppApi = {
       ipcRenderer.invoke(IPC_CHANNELS.ABANDON_ALL_OPEN_BRANCHES),
     rename: (nodeId: string, newTitle: string) =>
       ipcRenderer.invoke(IPC_CHANNELS.RENAME_NODE, { nodeId, newTitle }),
-    delete: (nodeId: string) =>
-      ipcRenderer.invoke(IPC_CHANNELS.DELETE_NODE, { nodeId }),
+    delete: (nodeId: string, preferredFallbackNodeId?: string) =>
+      ipcRenderer.invoke(IPC_CHANNELS.DELETE_NODE, { nodeId, preferredFallbackNodeId }),
     reactivate: (nodeId: string) =>
       ipcRenderer.invoke(IPC_CHANNELS.REACTIVATE_NODE, { nodeId }),
     restore: (nodeId: string) =>
@@ -63,7 +63,18 @@ export const attentionAppApi = {
   data: {
     export: () => ipcRenderer.invoke(IPC_CHANNELS.EXPORT_DATA),
     import: (data: any) => ipcRenderer.invoke(IPC_CHANNELS.IMPORT_DATA, data),
-    deleteAll: () => ipcRenderer.invoke(IPC_CHANNELS.DELETE_ALL_DATA)
+    deleteAll: () => ipcRenderer.invoke(IPC_CHANNELS.DELETE_ALL_DATA),
+    createBackup: () => ipcRenderer.invoke(IPC_CHANNELS.CREATE_BACKUP),
+    openBackupsFolder: () => ipcRenderer.invoke(IPC_CHANNELS.OPEN_BACKUPS_FOLDER)
+  },
+  gdrive: {
+    connect: () => ipcRenderer.invoke(IPC_CHANNELS.GDRIVE_CONNECT),
+    disconnect: () => ipcRenderer.invoke(IPC_CHANNELS.GDRIVE_DISCONNECT),
+    getStatus: () => ipcRenderer.invoke(IPC_CHANNELS.GDRIVE_STATUS),
+    sync: () => ipcRenderer.invoke(IPC_CHANNELS.GDRIVE_SYNC),
+    listBackups: () => ipcRenderer.invoke(IPC_CHANNELS.GDRIVE_LIST),
+    restoreLatest: (fileId?: string) => ipcRenderer.invoke(IPC_CHANNELS.GDRIVE_RESTORE_LATEST, fileId),
+    checkBackups: () => ipcRenderer.invoke(IPC_CHANNELS.GDRIVE_CHECK_BACKUPS)
   },
   windowControls: {
     dock: () => ipcRenderer.invoke(IPC_CHANNELS.WINDOW_DOCK),

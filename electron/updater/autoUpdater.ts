@@ -29,7 +29,7 @@ export class AutoUpdater {
   private activeAbortController: AbortController | null = null;
 
   private getAppVersion(): string {
-    return typeof app?.getVersion === 'function' ? app.getVersion() : '1.0.3';
+    return typeof app?.getVersion === 'function' ? app.getVersion() : '1.0.4';
   }
 
   constructor() {
@@ -133,7 +133,7 @@ export class AutoUpdater {
       const response = await fetch('https://api.github.com/repos/guider23/Wander/releases/latest', {
         headers: {
           Accept: 'application/vnd.github.v3+json',
-          'User-Agent': 'Attention-Path-AutoUpdater'
+          'User-Agent': 'Wander-AutoUpdater'
         }
       });
 
@@ -198,14 +198,14 @@ export class AutoUpdater {
     this.isDownloading = true;
     this.activeAbortController = new AbortController();
 
-    const updateDir = path.join(app.getPath('temp'), 'AttentionPathUpdate');
+    const updateDir = path.join(app.getPath('temp'), 'WanderUpdate');
     if (!fs.existsSync(updateDir)) {
       fs.mkdirSync(updateDir, { recursive: true });
     }
 
     // Determine target filename
     const urlFilename = path.basename(new URL(downloadUrl).pathname);
-    const filename = this.status.assetName || urlFilename || (process.platform === 'win32' ? 'AttentionPathSetup.exe' : 'AttentionPath.dmg');
+    const filename = this.status.assetName || urlFilename || (process.platform === 'win32' ? 'WanderSetup.exe' : 'Wander.dmg');
     const targetPath = path.join(updateDir, filename);
 
     this.notify({
@@ -219,7 +219,7 @@ export class AutoUpdater {
     try {
       const response = await fetch(downloadUrl, {
         headers: {
-          'User-Agent': 'Attention-Path-AutoUpdater'
+          'User-Agent': 'Wander-AutoUpdater'
         },
         redirect: 'follow',
         signal: this.activeAbortController.signal
@@ -319,7 +319,7 @@ export class AutoUpdater {
         });
         installer.unref();
 
-        // Give process a small moment before terminating Attention Path
+        // Give process a small moment before terminating Wander
         setTimeout(() => {
           app.quit();
           process.exit(0);
@@ -334,18 +334,18 @@ export class AutoUpdater {
     if (platform === 'darwin') {
       // macOS installation (.dmg or .zip)
       if (filePath.endsWith('.dmg')) {
-        const mountPoint = path.join(os.tmpdir(), `AttentionMount_${Date.now()}`);
+        const mountPoint = path.join(os.tmpdir(), `WanderMount_${Date.now()}`);
         try {
           fs.mkdirSync(mountPoint, { recursive: true });
 
           // Attach DMG silently
           await execPromise(`hdiutil attach "${filePath}" -nobrowse -mountpoint "${mountPoint}" -quiet`);
 
-          const appSource = path.join(mountPoint, 'Attention Path.app');
-          const appDest = '/Applications/Attention Path.app';
+          const appSource = path.join(mountPoint, 'Wander.app');
+          const appDest = '/Applications/Wander.app';
 
           if (fs.existsSync(appSource)) {
-            // Replace /Applications/Attention Path.app
+            // Replace /Applications/Wander.app
             if (fs.existsSync(appDest)) {
               await execPromise(`rm -rf "${appDest}"`);
             }
@@ -378,12 +378,12 @@ export class AutoUpdater {
           return;
         }
       } else if (filePath.endsWith('.zip')) {
-        const extractDir = path.join(os.tmpdir(), `AttentionZip_${Date.now()}`);
+        const extractDir = path.join(os.tmpdir(), `WanderZip_${Date.now()}`);
         try {
           fs.mkdirSync(extractDir, { recursive: true });
           await execPromise(`ditto -xk "${filePath}" "${extractDir}"`);
-          const appSource = path.join(extractDir, 'Attention Path.app');
-          const appDest = '/Applications/Attention Path.app';
+          const appSource = path.join(extractDir, 'Wander.app');
+          const appDest = '/Applications/Wander.app';
 
           if (fs.existsSync(appSource)) {
             if (fs.existsSync(appDest)) {

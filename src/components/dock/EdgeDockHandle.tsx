@@ -71,7 +71,7 @@ export const EdgeDockHandle: React.FC<EdgeDockHandleProps> = ({ onExpand, active
       }}
       title={`Active Focus: ${title} (Click to open)`}
       role="button"
-      aria-label="Open Attention Path"
+      aria-label="Open Wander"
     >
       <div
         style={{

@@ -93,12 +93,12 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ update, onDismiss })
         flexDirection: 'column',
         gap: '6px',
         padding: '10px 14px',
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        backgroundColor: 'var(--background-glass)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
-        border: '1px solid rgba(216, 199, 184, 0.9)',
+        border: '1px solid var(--dock-border)',
         borderRadius: '12px',
-        boxShadow: '0 10px 32px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.04)',
+        boxShadow: 'var(--shadow-dock)',
         animation: 'notionFadeIn 200ms cubic-bezier(0.16, 1, 0.3, 1)',
         maxWidth: '380px',
         minWidth: '310px'
@@ -107,8 +107,8 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ update, onDismiss })
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <ArrowUpCircle size={16} strokeWidth={2.2} color="#C49B71" />
-          <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#181818', letterSpacing: '-0.01em' }}>
+          <ArrowUpCircle size={16} strokeWidth={2.2} color="var(--accent)" />
+          <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.01em' }}>
             {isInstalling
               ? `Installing Wander ${update.latestVersion}...`
               : isDownloading
@@ -123,7 +123,7 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ update, onDismiss })
             style={{
               background: 'none',
               border: 'none',
-              color: '#8A827B',
+              color: 'var(--ink-muted)',
               cursor: 'pointer',
               padding: '2px',
               display: 'flex',
@@ -139,8 +139,8 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ update, onDismiss })
       </div>
 
       {!isDownloading && !isInstalling && (
-        <div style={{ fontSize: '11.5px', color: '#5C554F', lineHeight: '1.4' }}>
-          You are on <code style={{ backgroundColor: 'rgba(0,0,0,0.06)', padding: '1px 4px', borderRadius: '4px' }}>v{update.currentVersion}</code>.
+        <div style={{ fontSize: '11.5px', color: 'var(--ink-secondary)', lineHeight: '1.4' }}>
+          You are on <code style={{ backgroundColor: 'var(--dock-hover)', color: 'var(--ink)', padding: '1px 4px', borderRadius: '4px' }}>v{update.currentVersion}</code>.
           Update now to get the latest fixes and improvements.
         </div>
       )}
@@ -152,7 +152,7 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ update, onDismiss })
             style={{
               width: '100%',
               height: '5px',
-              backgroundColor: 'rgba(0, 0, 0, 0.08)',
+              backgroundColor: 'var(--ink-border)',
               borderRadius: '3px',
               overflow: 'hidden'
             }}
@@ -161,7 +161,7 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ update, onDismiss })
               style={{
                 width: isInstalling ? '100%' : `${downloadProgress.percent}%`,
                 height: '100%',
-                backgroundColor: '#C49B71',
+                backgroundColor: 'var(--accent)',
                 borderRadius: '3px',
                 transition: 'width 150ms linear'
               }}
@@ -173,7 +173,7 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ update, onDismiss })
               display: 'flex',
               justifyContent: 'space-between',
               fontSize: '10.5px',
-              color: '#7A726A',
+              color: 'var(--ink-secondary)',
               marginTop: '4px'
             }}
           >
@@ -189,7 +189,7 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ update, onDismiss })
 
       {/* Error state */}
       {isError && (
-        <div style={{ fontSize: '11px', color: '#C04B37', margin: '2px 0' }}>
+        <div style={{ fontSize: '11px', color: '#FB7185', margin: '2px 0' }}>
           {downloadProgress.error || 'Update download encountered an issue.'}
         </div>
       )}
@@ -204,7 +204,7 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ update, onDismiss })
               border: 'none',
               padding: 0,
               fontSize: '11px',
-              color: '#A58E7A',
+              color: 'var(--accent)',
               fontWeight: 500,
               cursor: 'pointer',
               display: 'flex',
@@ -222,10 +222,10 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ update, onDismiss })
               style={{
                 marginTop: '6px',
                 padding: '6px 8px',
-                backgroundColor: 'rgba(0, 0, 0, 0.03)',
+                backgroundColor: 'var(--dock-hover)',
                 borderRadius: '6px',
                 fontSize: '11px',
-                color: '#3A3632',
+                color: 'var(--ink-secondary)',
                 maxHeight: '120px',
                 overflowY: 'auto',
                 whiteSpace: 'pre-wrap',
@@ -245,16 +245,16 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ update, onDismiss })
             onClick={handleKeepCurrent}
             style={{
               background: 'none',
-              border: '1px solid rgba(0, 0, 0, 0.12)',
+              border: '1px solid var(--ink-border)',
               padding: '4px 10px',
               borderRadius: '6px',
               fontSize: '11px',
               fontWeight: 500,
-              color: '#5C554F',
+              color: 'var(--ink-secondary)',
               cursor: 'pointer',
               transition: 'background-color 120ms ease'
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.05)'; }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--dock-hover)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
           >
             Keep v{update.currentVersion}
@@ -267,13 +267,13 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ update, onDismiss })
               display: 'inline-flex',
               alignItems: 'center',
               gap: '5px',
-              backgroundColor: '#181818',
+              backgroundColor: 'var(--accent)',
               border: 'none',
               padding: '4px 12px',
               borderRadius: '6px',
               fontSize: '11px',
               fontWeight: 600,
-              color: '#F5E6D8',
+              color: 'var(--background-canvas)',
               cursor: isUpdating ? 'wait' : 'pointer',
               boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
               transition: 'transform 120ms ease'

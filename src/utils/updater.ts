@@ -21,7 +21,7 @@ export interface UpdateInfo {
   error?: string;
 }
 
-export const FALLBACK_APP_VERSION = '1.0.3';
+export const FALLBACK_APP_VERSION = '1.0.4';
 const DISMISSED_SESSION_KEY = 'wander_dismissed_update_version';
 
 // Clear legacy permanent localStorage dismissal so users always get fresh checks on new app launch
@@ -131,7 +131,7 @@ export async function checkForAppUpdates(): Promise<UpdateInfo> {
     const response = await fetch('https://api.github.com/repos/guider23/Wander/releases/latest', {
       headers: {
         Accept: 'application/vnd.github.v3+json',
-        'User-Agent': 'Attention-Path-Client'
+        'User-Agent': 'Wander-Client'
       }
     });
 

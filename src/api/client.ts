@@ -38,7 +38,11 @@ class MockAttentionStorage {
   settings: AppSettings = {
     timeFormat: '12h',
     reducedMotion: false,
-    highContrast: false
+    highContrast: false,
+    continuumMode: 'auto',
+    autoDock: true,
+    alwaysOnTop: true,
+    startDocked: false
   };
 
   constructor() {
@@ -484,8 +488,8 @@ export const api = {
       return { success: true };
     },
 
-    delete: async (nodeId: string): Promise<{ success: boolean }> => {
-      if (window.attentionApp) return window.attentionApp.nodes.delete(nodeId);
+    delete: async (nodeId: string, preferredFallbackNodeId?: string): Promise<{ success: boolean }> => {
+      if (window.attentionApp) return window.attentionApp.nodes.delete(nodeId, preferredFallbackNodeId);
       const now = new Date().toISOString();
       const node = mockStorage.nodes.find((n) => n.id === nodeId);
       if (node) {
@@ -499,6 +503,22 @@ export const api = {
             });
         };
         markChildren(nodeId);
+
+        const activeSession = mockStorage.sessions.find((s) => s.status === 'ACTIVE');
+        if (activeSession && activeSession.focusNodeId === nodeId) {
+          if (preferredFallbackNodeId) {
+            activeSession.focusNodeId = preferredFallbackNodeId;
+          } else if (node.parentNodeId) {
+            const siblings = mockStorage.nodes.filter(
+              (n) => n.parentNodeId === node.parentNodeId && n.id !== nodeId && !n.deletedAt
+            );
+            if (siblings.length > 0) {
+              activeSession.focusNodeId = siblings[0].id;
+            } else {
+              activeSession.focusNodeId = node.parentNodeId;
+            }
+          }
+        }
       }
       mockStorage.save();
       return { success: true };
@@ -699,16 +719,152 @@ export const api = {
     },
     import: async (data: any) => {
       if (window.attentionApp) return window.attentionApp.data.import(data);
-      if (data.trees) mockStorage.trees = data.trees;
-      if (data.nodes) mockStorage.nodes = data.nodes;
-      if (data.sessions) mockStorage.sessions = data.sessions;
-      if (data.events) mockStorage.events = data.events;
-      if (data.settings) mockStorage.settings = data.settings;
+      if (!data || (typeof data !== 'object' && !Array.isArray(data))) {
+        throw new Error('Invalid export data payload: expected an object or array');
+      }
+
+      let rawTrees: any[] = [];
+      let rawNodes: any[] = [];
+      let rawSessions: any[] = [];
+      let rawEvents: any[] = [];
+      let rawSettings: any = null;
+
+      if (Array.isArray(data)) {
+        for (const item of data) {
+          if (!item || typeof item !== 'object') continue;
+          if (item.rootNodeId || item.root_node_id || item.relationshipType || item.relationship_type) {
+            rawTrees.push(item);
+          } else if (item.title !== undefined || item.kind !== undefined || item.parentNodeId !== undefined || item.parent_node_id !== undefined) {
+            rawNodes.push(item);
+          } else if (item.focusNodeId !== undefined || item.focus_node_id !== undefined) {
+            rawSessions.push(item);
+          } else if (item.type !== undefined) {
+            rawEvents.push(item);
+          }
+        }
+      } else {
+        const payload = data.data && typeof data.data === 'object' && !Array.isArray(data.data) ? data.data : data;
+        if (Array.isArray(payload.trees)) rawTrees.push(...payload.trees);
+        else if (payload.tree && typeof payload.tree === 'object') rawTrees.push(payload.tree);
+
+        if (Array.isArray(payload.nodes)) rawNodes.push(...payload.nodes);
+        else if (payload.node && typeof payload.node === 'object') rawNodes.push(payload.node);
+
+        if (Array.isArray(payload.sessions)) rawSessions.push(...payload.sessions);
+        else if (payload.session && typeof payload.session === 'object') rawSessions.push(payload.session);
+
+        if (Array.isArray(payload.events)) rawEvents.push(...payload.events);
+        else if (payload.event && typeof payload.event === 'object') rawEvents.push(payload.event);
+
+        if (payload.settings && typeof payload.settings === 'object') {
+          rawSettings = payload.settings;
+        }
+      }
+
+      const now = new Date().toISOString();
+
+      for (const t of rawTrees) {
+        const id = String(t.id || uuidv4());
+        const rootNodeId = String(t.rootNodeId || t.root_node_id || '');
+        const treeObj: Tree = {
+          id,
+          rootNodeId,
+          originTreeId: t.originTreeId || t.origin_tree_id || null,
+          originNodeId: t.originNodeId || t.origin_node_id || null,
+          originSessionId: t.originSessionId || t.origin_session_id || null,
+          relationshipType: t.relationshipType || t.relationship_type || 'NEW_WORK',
+          status: t.status || 'ACTIVE',
+          createdAt: t.createdAt || t.created_at || now,
+          updatedAt: t.updatedAt || t.updated_at || now,
+          endedAt: t.endedAt || t.ended_at || null,
+          deletedAt: t.deletedAt || t.deleted_at || null,
+          schemaVersion: Number(t.schemaVersion || t.schema_version || 1)
+        };
+        const idx = mockStorage.trees.findIndex((x) => x.id === id);
+        if (idx >= 0) mockStorage.trees[idx] = treeObj;
+        else mockStorage.trees.push(treeObj);
+      }
+
+      for (const n of rawNodes) {
+        const id = String(n.id || uuidv4());
+        const parentNodeId = n.parentNodeId || n.parent_node_id || null;
+        const nodeObj: Node = {
+          id,
+          treeId: String(n.treeId || n.tree_id || (mockStorage.trees[0]?.id || '')),
+          parentNodeId,
+          title: String(n.title ?? 'Untitled').trim() || 'Untitled',
+          kind: n.kind || (parentNodeId ? 'WORK_STEP' : 'ROOT_WORK'),
+          status: n.status || 'ONGOING',
+          createdAt: n.createdAt || n.created_at || now,
+          updatedAt: n.updatedAt || n.updated_at || now,
+          completedAt: n.completedAt || n.completed_at || null,
+          abandonedAt: n.abandonedAt || n.abandoned_at || null,
+          deletedAt: n.deletedAt || n.deleted_at || null,
+          metadataJson: typeof n.metadataJson === 'string' ? n.metadataJson : n.metadata_json || null,
+          schemaVersion: Number(n.schemaVersion || n.schema_version || 1)
+        };
+        const idx = mockStorage.nodes.findIndex((x) => x.id === id);
+        if (idx >= 0) mockStorage.nodes[idx] = nodeObj;
+        else mockStorage.nodes.push(nodeObj);
+      }
+
+      for (const s of rawSessions) {
+        const id = String(s.id || uuidv4());
+        const sessionObj: Session = {
+          id,
+          treeId: String(s.treeId || s.tree_id || (mockStorage.trees[0]?.id || '')),
+          focusNodeId: String(s.focusNodeId || s.focus_node_id || ''),
+          previousSessionId: s.previousSessionId || s.previous_session_id || null,
+          status: s.status || 'ACTIVE',
+          startedAt: s.startedAt || s.started_at || now,
+          endedAt: s.endedAt || s.ended_at || null,
+          createdAt: s.createdAt || s.created_at || now,
+          updatedAt: s.updatedAt || s.updated_at || now,
+          schemaVersion: Number(s.schemaVersion || s.schema_version || 1)
+        };
+        const idx = mockStorage.sessions.findIndex((x) => x.id === id);
+        if (idx >= 0) mockStorage.sessions[idx] = sessionObj;
+        else mockStorage.sessions.push(sessionObj);
+      }
+
+      for (const e of rawEvents) {
+        const id = String(e.id || uuidv4());
+        const eventObj: DomainEvent = {
+          id,
+          type: e.type || 'SYSTEM_SNAPSHOT',
+          treeId: e.treeId || e.tree_id || null,
+          sessionId: e.sessionId || e.session_id || null,
+          nodeId: e.nodeId || e.node_id || null,
+          occurredAt: e.occurredAt || e.occurred_at || now,
+          createdAt: e.createdAt || e.created_at || now,
+          sequence: typeof e.sequence === 'number' ? e.sequence : mockStorage.events.length + 1,
+          payload: e.payload ?? (e.payload_json ? JSON.parse(e.payload_json) : {}),
+          schemaVersion: Number(e.schemaVersion || e.schema_version || 1)
+        };
+        const idx = mockStorage.events.findIndex((x) => x.id === id);
+        if (idx >= 0) mockStorage.events[idx] = eventObj;
+        else mockStorage.events.push(eventObj);
+      }
+
+      if (rawSettings) {
+        mockStorage.settings = { ...mockStorage.settings, ...rawSettings };
+      }
+
+      const targetTree = mockStorage.trees.find((t) => !t.deletedAt);
+      if (targetTree) {
+        mockStorage.trees.forEach((t) => {
+          if (t.id === targetTree.id) t.status = 'ACTIVE';
+          else if (t.status === 'ACTIVE') t.status = 'PAUSED';
+        });
+      }
+
       mockStorage.save();
       return {
-        importedTrees: (data.trees || []).length,
-        importedNodes: (data.nodes || []).length,
-        importedEvents: (data.events || []).length
+        importedTrees: rawTrees.length,
+        importedNodes: rawNodes.length,
+        importedSessions: rawSessions.length,
+        importedEvents: rawEvents.length,
+        activeTreeId: targetTree ? targetTree.id : null
       };
     },
     deleteAll: async () => {
@@ -719,6 +875,79 @@ export const api = {
       mockStorage.events = [];
       mockStorage.save();
       return { success: true };
+    },
+    createBackup: async (): Promise<{ success: boolean; filename?: string; backupPath?: string }> => {
+      if (window.attentionApp?.data?.createBackup) {
+        return window.attentionApp.data.createBackup();
+      }
+      const data = await api.data.export();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `wander-backup-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      return { success: true, filename: a.download };
+    },
+    openBackupsFolder: async (): Promise<{ success: boolean; backupsDir?: string }> => {
+      if (window.attentionApp?.data?.openBackupsFolder) {
+        return window.attentionApp.data.openBackupsFolder();
+      }
+      return { success: false };
+    }
+  },
+
+  gdrive: {
+    connect: async (): Promise<{ success: boolean; email?: string; error?: string }> => {
+      if (window.attentionApp?.gdrive?.connect) {
+        return window.attentionApp.gdrive.connect();
+      }
+      return { success: false, error: 'Desktop integration required' };
+    },
+    disconnect: async (): Promise<{ success: boolean }> => {
+      if (window.attentionApp?.gdrive?.disconnect) {
+        return window.attentionApp.gdrive.disconnect();
+      }
+      return { success: true };
+    },
+    getStatus: async (): Promise<{ isConnected: boolean; email?: string; lastSyncAt?: string }> => {
+      if (window.attentionApp?.gdrive?.getStatus) {
+        return window.attentionApp.gdrive.getStatus();
+      }
+      return { isConnected: false };
+    },
+    sync: async (): Promise<{ success: boolean; filename?: string; error?: string }> => {
+      if (window.attentionApp?.gdrive?.sync) {
+        return window.attentionApp.gdrive.sync();
+      }
+      return { success: false, error: 'Desktop integration required' };
+    },
+    listBackups: async (): Promise<{ id: string; name: string; size?: string; createdTime?: string }[]> => {
+      if (window.attentionApp?.gdrive?.listBackups) {
+        return window.attentionApp.gdrive.listBackups();
+      }
+      return [];
+    },
+    restoreLatest: async (
+      fileId?: string
+    ): Promise<{
+      success: boolean;
+      importedTrees: number;
+      importedNodes: number;
+      filename?: string;
+      error?: string;
+    }> => {
+      if (window.attentionApp?.gdrive?.restoreLatest) {
+        return window.attentionApp.gdrive.restoreLatest(fileId);
+      }
+      return { success: false, importedTrees: 0, importedNodes: 0, error: 'Desktop integration required' };
+    },
+    checkBackups: async (): Promise<{ id: string; name: string; size?: string; createdTime?: string } | null> => {
+      if (window.attentionApp?.gdrive?.checkBackups) {
+        return window.attentionApp.gdrive.checkBackups();
+      }
+      return null;
     }
   },
 

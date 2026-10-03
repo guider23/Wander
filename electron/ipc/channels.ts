@@ -20,6 +20,8 @@ export const IPC_CHANNELS = {
   EXPORT_DATA: 'attention:export-data',
   IMPORT_DATA: 'attention:import-data',
   DELETE_ALL_DATA: 'attention:delete-all-data',
+  CREATE_BACKUP: 'attention:create-backup',
+  OPEN_BACKUPS_FOLDER: 'attention:open-backups-folder',
   WINDOW_DOCK: 'attention:window-dock',
   WINDOW_EXPAND: 'attention:window-expand',
   WINDOW_CLOSE: 'attention:window-close',
@@ -32,5 +34,12 @@ export const IPC_CHANNELS = {
   START_UPDATE_DOWNLOAD: 'attention:start-update-download',
   GET_UPDATE_STATUS: 'attention:get-update-status',
   INSTALL_UPDATE: 'attention:install-update',
-  UPDATE_PROGRESS: 'attention:update-progress'
+  UPDATE_PROGRESS: 'attention:update-progress',
+  GDRIVE_CONNECT: 'attention:gdrive-connect',
+  GDRIVE_DISCONNECT: 'attention:gdrive-disconnect',
+  GDRIVE_STATUS: 'attention:gdrive-status',
+  GDRIVE_SYNC: 'attention:gdrive-sync',
+  GDRIVE_LIST: 'attention:gdrive-list',
+  GDRIVE_RESTORE_LATEST: 'attention:gdrive-restore-latest',
+  GDRIVE_CHECK_BACKUPS: 'attention:gdrive-check-backups'
 } as const;

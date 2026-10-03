@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, History, SlidersHorizontal, HelpCircle } from 'lucide-react';
+import { Plus, History, BookOpen, SlidersHorizontal, HelpCircle } from 'lucide-react';
 import { WanderLogo } from '../icons/WanderLogo';
 import { formatShortcut } from '../../utils/platform';
 
@@ -7,9 +7,11 @@ interface MacDockProps {
   activeTitle?: string | null;
   onNewWork: () => void;
   onOpenHistory: () => void;
+  onOpenMentalModel: () => void;
   onOpenSettings: () => void;
   onOpenGuide: () => void;
   hasUpdate?: boolean;
+  isContinuumMode?: boolean;
 }
 
 interface DockItem {
@@ -25,9 +27,11 @@ export const MacDock: React.FC<MacDockProps> = ({
   activeTitle,
   onNewWork,
   onOpenHistory,
+  onOpenMentalModel,
   onOpenSettings,
   onOpenGuide,
-  hasUpdate
+  hasUpdate,
+  isContinuumMode = false
 }) => {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
@@ -35,7 +39,7 @@ export const MacDock: React.FC<MacDockProps> = ({
     {
       id: 'active-status',
       label: activeTitle ? `Active: ${activeTitle}` : 'Wander (Active Session)',
-      icon: <WanderLogo size={20} />,
+      icon: <WanderLogo size={20} color={isContinuumMode ? '#FFFFFF' : '#181818'} />,
       action: () => {},
       active: !!activeTitle,
       isNonClickable: true
@@ -51,6 +55,12 @@ export const MacDock: React.FC<MacDockProps> = ({
       label: `Attention History (${formatShortcut('Ctrl+H')})`,
       icon: <History size={17} strokeWidth={1.75} />,
       action: onOpenHistory
+    },
+    {
+      id: 'model',
+      label: 'Mental Model & Botanical Guide',
+      icon: <BookOpen size={17} strokeWidth={1.75} />,
+      action: onOpenMentalModel
     },
     {
       id: 'settings',
@@ -81,9 +91,10 @@ export const MacDock: React.FC<MacDockProps> = ({
         backgroundColor: 'var(--background-glass)',
         backdropFilter: 'blur(24px)',
         WebkitBackdropFilter: 'blur(24px)',
-        border: '1px solid rgba(216, 199, 184, 0.7)',
+        border: '1px solid var(--dock-border)',
         borderRadius: '24px',
-        boxShadow: 'var(--shadow-dock)'
+        boxShadow: 'var(--shadow-dock)',
+        transition: 'var(--theme-transition)'
       }}
       role="toolbar"
       aria-label="Application dock"
@@ -102,15 +113,16 @@ export const MacDock: React.FC<MacDockProps> = ({
                     bottom: '48px',
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    backgroundColor: 'rgba(24, 24, 24, 0.92)',
-                    color: '#F5E6D8',
+                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                    color: '#F8FAFC',
                     fontSize: '11px',
                     fontWeight: 500,
                     padding: '4px 10px',
                     borderRadius: '8px',
                     whiteSpace: 'nowrap',
                     pointerEvents: 'none',
-                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12)',
+                    boxShadow: '0 4px 14px rgba(0, 0, 0, 0.25)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
                     letterSpacing: '0.01em',
                     animation: 'notionFadeIn 120ms ease-out'
                   }}
@@ -128,8 +140,8 @@ export const MacDock: React.FC<MacDockProps> = ({
                   width: '36px',
                   height: '36px',
                   borderRadius: '10px',
-                  backgroundColor: !item.isNonClickable && isHovered ? 'rgba(24, 24, 24, 0.08)' : 'transparent',
-                  color: '#181818',
+                  backgroundColor: !item.isNonClickable && isHovered ? 'var(--dock-hover)' : 'transparent',
+                  color: 'var(--ink)',
                   border: 'none',
                   outline: 'none',
                   cursor: item.isNonClickable ? 'default' : 'pointer',
@@ -140,7 +152,7 @@ export const MacDock: React.FC<MacDockProps> = ({
                   transform: item.isNonClickable
                     ? 'none'
                     : `scale(${isHovered ? 1.2 : 1}) translateY(${isHovered ? -3 : 0}px)`,
-                  transition: 'transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1), background-color 140ms ease',
+                  transition: 'transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1), background-color 140ms ease, color 1400ms ease',
                   position: 'relative'
                 }}
                 aria-label={item.label}
@@ -156,7 +168,8 @@ export const MacDock: React.FC<MacDockProps> = ({
                       width: '3px',
                       height: '3px',
                       borderRadius: '50%',
-                      backgroundColor: '#181818'
+                      backgroundColor: 'var(--accent)',
+                      boxShadow: '0 0 4px var(--accent)'
                     }}
                   />
                 )}

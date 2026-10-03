@@ -148,10 +148,12 @@ export const NotionCommandModal: React.FC<NotionCommandModalProps> = ({
         style={{
           width: '90%',
           maxWidth: '560px',
-          backgroundColor: '#FFFFFF',
+          backgroundColor: 'var(--background-card)',
           borderRadius: '16px',
-          border: '1px solid rgba(0, 0, 0, 0.08)',
-          boxShadow: '0 24px 64px -12px rgba(0, 0, 0, 0.18), 0 4px 16px rgba(0, 0, 0, 0.05)',
+          border: '1px solid var(--ink-border)',
+          boxShadow: 'var(--shadow-notion)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
           overflow: 'hidden',
           animation: 'notionFadeIn 150ms cubic-bezier(0.16, 1, 0.3, 1)'
         }}
@@ -164,17 +166,18 @@ export const NotionCommandModal: React.FC<NotionCommandModalProps> = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
-            backgroundColor: '#FAFAF9'
+            borderBottom: '1px solid var(--ink-border)',
+            backgroundColor: 'var(--background-input)'
           }}
         >
           <div
             style={{
               display: 'flex',
-              backgroundColor: 'rgba(0, 0, 0, 0.05)',
+              backgroundColor: 'var(--dock-hover)',
               padding: '2px',
               borderRadius: '9px',
-              gap: '2px'
+              gap: '2px',
+              border: '1px solid var(--ink-border)'
             }}
           >
             <button
@@ -185,9 +188,9 @@ export const NotionCommandModal: React.FC<NotionCommandModalProps> = ({
                 fontWeight: kind === 'step' ? 600 : 450,
                 padding: '4px 10px',
                 borderRadius: '7px',
-                backgroundColor: kind === 'step' ? '#FFFFFF' : 'transparent',
-                color: kind === 'step' ? '#1A1A1A' : '#787774',
-                boxShadow: kind === 'step' ? '0 1px 3px rgba(0, 0, 0, 0.08)' : 'none',
+                backgroundColor: kind === 'step' ? 'var(--background-card)' : 'transparent',
+                color: kind === 'step' ? 'var(--ink)' : 'var(--ink-secondary)',
+                boxShadow: kind === 'step' ? '0 1px 3px rgba(0, 0, 0, 0.2)' : 'none',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '5px',
@@ -206,9 +209,9 @@ export const NotionCommandModal: React.FC<NotionCommandModalProps> = ({
                 fontWeight: kind === 'thought' ? 600 : 450,
                 padding: '4px 10px',
                 borderRadius: '7px',
-                backgroundColor: kind === 'thought' ? '#FFFFFF' : 'transparent',
-                color: kind === 'thought' ? '#1A1A1A' : '#787774',
-                boxShadow: kind === 'thought' ? '0 1px 3px rgba(0, 0, 0, 0.08)' : 'none',
+                backgroundColor: kind === 'thought' ? 'var(--background-card)' : 'transparent',
+                color: kind === 'thought' ? 'var(--ink)' : 'var(--ink-secondary)',
+                boxShadow: kind === 'thought' ? '0 1px 3px rgba(0, 0, 0, 0.2)' : 'none',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '5px',
@@ -227,9 +230,9 @@ export const NotionCommandModal: React.FC<NotionCommandModalProps> = ({
                 fontWeight: kind === 'work' ? 600 : 450,
                 padding: '4px 10px',
                 borderRadius: '7px',
-                backgroundColor: kind === 'work' ? '#FFFFFF' : 'transparent',
-                color: kind === 'work' ? '#1A1A1A' : '#787774',
-                boxShadow: kind === 'work' ? '0 1px 3px rgba(0, 0, 0, 0.08)' : 'none',
+                backgroundColor: kind === 'work' ? 'var(--background-card)' : 'transparent',
+                color: kind === 'work' ? 'var(--ink)' : 'var(--ink-secondary)',
+                boxShadow: kind === 'work' ? '0 1px 3px rgba(0, 0, 0, 0.2)' : 'none',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '5px',
@@ -242,7 +245,7 @@ export const NotionCommandModal: React.FC<NotionCommandModalProps> = ({
             </button>
           </div>
 
-          <span style={{ fontSize: '11px', color: '#9B9A97' }}>
+          <span style={{ fontSize: '11px', color: 'var(--ink-muted)' }}>
             {contextNodeTitle ? `Under: ${contextNodeTitle.slice(0, 24)}` : 'Attention Journal'}
           </span>
         </div>
@@ -261,7 +264,7 @@ export const NotionCommandModal: React.FC<NotionCommandModalProps> = ({
                 width: '100%',
                 fontSize: '15px',
                 fontWeight: 500,
-                color: '#1A1A1A',
+                color: 'var(--ink)',
                 backgroundColor: 'transparent',
                 border: 'none',
                 outline: 'none',
@@ -280,22 +283,23 @@ export const NotionCommandModal: React.FC<NotionCommandModalProps> = ({
               justifyContent: 'space-between',
               marginTop: '16px',
               paddingTop: '12px',
-              borderTop: '1px solid rgba(0, 0, 0, 0.05)'
+              borderTop: '1px solid var(--ink-border)'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: '#9B9A97' }}>
-              <span>Press <kbd style={{ padding: '1px 5px', borderRadius: '4px', backgroundColor: 'rgba(0, 0, 0, 0.05)', border: '1px solid rgba(0, 0, 0, 0.08)', fontFamily: 'inherit' }}>Enter</kbd> to save</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: 'var(--ink-muted)' }}>
+              <span>Press <kbd style={{ padding: '1px 5px', borderRadius: '4px', backgroundColor: 'var(--dock-hover)', border: '1px solid var(--ink-border)', color: 'var(--ink)', fontFamily: 'inherit' }}>Enter</kbd> to save</span>
               <span>•</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#787774' }}>
-                <Sparkles size={11} strokeWidth={2} style={{ color: '#C85A2B' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--ink-secondary)' }}>
+                <Sparkles size={11} strokeWidth={2} style={{ color: 'var(--accent)' }} />
                 <span>Auto-correct</span>
                 {lastCorrection && (
                   <span
                     style={{
                       marginLeft: '3px',
-                      color: '#C85A2B',
+                      color: 'var(--accent)',
                       fontWeight: 600,
-                      backgroundColor: 'rgba(200, 90, 43, 0.1)',
+                      backgroundColor: 'var(--dock-hover)',
+                      border: '1px solid var(--ink-border)',
                       padding: '1px 6px',
                       borderRadius: '4px',
                       animation: 'notionFadeIn 120ms ease'
@@ -313,10 +317,10 @@ export const NotionCommandModal: React.FC<NotionCommandModalProps> = ({
               style={{
                 padding: '5px 14px',
                 borderRadius: '7px',
-                backgroundColor: '#1A1A1A',
-                color: '#FFFFFF',
+                backgroundColor: 'var(--accent)',
+                color: 'var(--background-canvas)',
                 fontSize: '12px',
-                fontWeight: 550,
+                fontWeight: 600,
                 display: 'flex',
                 alignItems: 'center',
                 gap: '5px',

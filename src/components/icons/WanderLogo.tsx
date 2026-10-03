@@ -18,6 +18,9 @@ export const WanderLogo: React.FC<WanderLogoProps> = ({
   className,
   style
 }) => {
+  const isWhite = color.toLowerCase() === '#ffffff' || color.toLowerCase() === 'white';
+  const ringFill = isWhite ? 'rgba(255, 255, 255, 0.25)' : '#F5E6D8';
+
   return (
     <svg
       width={size}
@@ -26,10 +29,16 @@ export const WanderLogo: React.FC<WanderLogoProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
-      style={{ display: 'inline-block', verticalAlign: 'middle', flexShrink: 0, ...style }}
+      style={{
+        display: 'inline-block',
+        verticalAlign: 'middle',
+        flexShrink: 0,
+        transition: 'all 240ms ease',
+        ...style
+      }}
     >
       {/* Root Node anchor */}
-      <circle cx="12" cy="19.2" r="1.25" fill={color} />
+      <circle cx="12" cy="19.2" r="1.25" fill={color} style={{ transition: 'fill 240ms ease' }} />
 
       {/* Stem connection */}
       <line
@@ -40,6 +49,7 @@ export const WanderLogo: React.FC<WanderLogoProps> = ({
         stroke={color}
         strokeWidth="1.1"
         strokeLinecap="round"
+        style={{ transition: 'stroke 240ms ease' }}
       />
 
       {/* Leaf / Fluid loop */}
@@ -49,6 +59,7 @@ export const WanderLogo: React.FC<WanderLogoProps> = ({
         strokeWidth="1.1"
         strokeLinecap="round"
         strokeLinejoin="round"
+        style={{ transition: 'stroke 240ms ease' }}
       />
 
       {/* Exploratory branch */}
@@ -57,6 +68,7 @@ export const WanderLogo: React.FC<WanderLogoProps> = ({
         stroke={color}
         strokeWidth="1.1"
         strokeLinecap="round"
+        style={{ transition: 'stroke 240ms ease' }}
       />
 
       {/* Branch node ring */}
@@ -66,7 +78,8 @@ export const WanderLogo: React.FC<WanderLogoProps> = ({
         r="1.1"
         stroke={color}
         strokeWidth="0.85"
-        fill="#F5E6D8"
+        fill={ringFill}
+        style={{ transition: 'all 240ms ease' }}
       />
     </svg>
   );

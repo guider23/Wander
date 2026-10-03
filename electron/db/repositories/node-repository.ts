@@ -49,6 +49,11 @@ export class NodeRepository {
     return rows.map((r) => this.mapRow(r));
   }
 
+  listByTreeIncludingDeleted(treeId: string): Node[] {
+    const rows = this.db.prepare('SELECT * FROM nodes WHERE tree_id = ? ORDER BY created_at ASC').all(treeId) as any[];
+    return rows.map((r) => this.mapRow(r));
+  }
+
   listAll(): Node[] {
     const rows = this.db.prepare('SELECT * FROM nodes WHERE deleted_at IS NULL ORDER BY created_at ASC').all() as any[];
     return rows.map((r) => this.mapRow(r));
