@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { CornerDownRight, Lightbulb, Target, Check, X, Trash2 } from 'lucide-react';
 import { Node } from '../../domain/entities/types';
 
@@ -45,6 +45,15 @@ export const RadialActionMenu: React.FC<RadialActionMenuProps> = ({
   onClose
 }) => {
   const [hoveredActionId, setHoveredActionId] = useState<RadialAction['id'] | null>(null);
+  const hoveredActionIdRef = useRef<RadialAction['id'] | null>(null);
+  hoveredActionIdRef.current = hoveredActionId;
+
+  const onSelectActionRef = useRef(onSelectAction);
+  onSelectActionRef.current = onSelectAction;
+
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   const isPointerDownRef = useRef(true);
   const didDragRef = useRef(false);
   const mountTimeRef = useRef(Date.now());
@@ -53,17 +62,19 @@ export const RadialActionMenu: React.FC<RadialActionMenuProps> = ({
   const count = ACTIONS.length;
   const angleStep = (2 * Math.PI) / count;
 
-  // Pre-calculate positions of all radial bubbles
-  const bubblePositions = ACTIONS.map((action, index) => {
-    // Start from top (-PI / 2) and spread clockwise
-    const angle = index * angleStep - Math.PI / 2;
-    return {
-      action,
-      angle,
-      bx: Math.cos(angle) * radius,
-      by: Math.sin(angle) * radius
-    };
-  });
+  // Pre-calculate positions of all radial bubbles once
+  const bubblePositions = useMemo(() => {
+    return ACTIONS.map((action, index) => {
+      // Start from top (-PI / 2) and spread clockwise
+      const angle = index * angleStep - Math.PI / 2;
+      return {
+        action,
+        angle,
+        bx: Math.cos(angle) * radius,
+        by: Math.sin(angle) * radius
+      };
+    });
+  }, [radius, angleStep]);
 
   // Calculate which bubble (if any) the pointer is dragging toward
   const handlePointerDrag = useCallback((clientX: number, clientY: number) => {
@@ -82,7 +93,7 @@ export const RadialActionMenu: React.FC<RadialActionMenuProps> = ({
     }
 
     // Pointer angle from center
-    let pAngle = Math.atan2(relY, relX);
+    const pAngle = Math.atan2(relY, relX);
 
     // Find the bubble with closest angle
     let closestId: RadialAction['id'] | null = null;
@@ -110,19 +121,35 @@ export const RadialActionMenu: React.FC<RadialActionMenuProps> = ({
     setHoveredActionId(closestId);
   }, [x, y, bubblePositions]);
 
-  // Global pointer listeners for Pinterest drag & release gesture
+  // Global pointer listeners for Pinterest drag & release gesture (stable bindings, zero listener churn)
   useEffect(() => {
+    let rafId: number | null = null;
+    let lastClientX = 0;
+    let lastClientY = 0;
+
     const onMove = (e: PointerEvent) => {
-      handlePointerDrag(e.clientX, e.clientY);
+      lastClientX = e.clientX;
+      lastClientY = e.clientY;
+      if (rafId === null) {
+        rafId = requestAnimationFrame(() => {
+          rafId = null;
+          handlePointerDrag(lastClientX, lastClientY);
+        });
+      }
     };
 
     const onUp = () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
       isPointerDownRef.current = false;
       const elapsed = Date.now() - mountTimeRef.current;
+      const currentHovered = hoveredActionIdRef.current;
 
       // If user dragged toward an action bubble and released, activate it immediately!
-      if (didDragRef.current && hoveredActionId) {
-        onSelectAction(hoveredActionId);
+      if (didDragRef.current && currentHovered) {
+        onSelectActionRef.current(currentHovered);
         return;
       }
 
@@ -132,18 +159,19 @@ export const RadialActionMenu: React.FC<RadialActionMenuProps> = ({
       }
 
       // If released outside with no selection after dragging, close
-      if (didDragRef.current && !hoveredActionId) {
-        onClose();
+      if (didDragRef.current && !currentHovered) {
+        onCloseRef.current();
       }
     };
 
-    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointermove', onMove, { passive: true });
     window.addEventListener('pointerup', onUp);
     return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
     };
-  }, [handlePointerDrag, hoveredActionId, onSelectAction, onClose]);
+  }, [handlePointerDrag]);
 
   // Keyboard Navigation: map 1-5 and Numpad1-5 (including Shift + Numpad / digits) to radial actions
   useEffect(() => {

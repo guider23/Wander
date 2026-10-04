@@ -75,17 +75,7 @@ export const App: React.FC = () => {
     };
   }, []);
 
-  // Pre-warm WebGL shader pipeline during idle time.
-  // This ensures shader compilation happens in the background at launch,
-  // completely eliminating the first-transition GPU shader compilation lag.
-  const [isGalaxyWarmedUp, setIsGalaxyWarmedUp] = useState(false);
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsGalaxyWarmedUp(true);
-    }, 350);
 
-    return () => clearTimeout(timer);
-  }, []);
 
   const refreshSettings = useCallback(async () => {
     try {
@@ -573,9 +563,7 @@ export const App: React.FC = () => {
         position: 'relative',
         background: 'var(--background-canvas)',
         backgroundColor: 'var(--background)',
-        transition: isCollapsing
-          ? 'appleGenieMinimize 220ms cubic-bezier(0.25, 1, 0.5, 1) forwards'
-          : 'var(--theme-transition)',
+        transition: 'var(--theme-transition)',
         transformOrigin: 'right 50%',
         animation: isCollapsing
           ? 'appleGenieMinimize 220ms cubic-bezier(0.25, 1, 0.5, 1) forwards'
@@ -598,7 +586,7 @@ export const App: React.FC = () => {
         }}
       >
         <GalaxyCanvas
-          active={isContinuumMode || isGalaxyWarmedUp}
+          active={isContinuumMode}
           opacity={1}
         />
       </div>

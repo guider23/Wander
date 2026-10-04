@@ -382,7 +382,7 @@ export const GalaxyCanvas: React.FC<GalaxyCanvasProps> = ({
 
     const updateDimensions = () => {
       const rect = canvas.getBoundingClientRect();
-      const dpr = Math.min(window.devicePixelRatio || 1, 2.0);
+      const dpr = 1.0;
       const targetWidth = Math.max(1, Math.floor(rect.width * dpr));
       const targetHeight = Math.max(1, Math.floor(rect.height * dpr));
 
@@ -479,7 +479,6 @@ export const GalaxyCanvas: React.FC<GalaxyCanvasProps> = ({
       if (delta >= FRAME_INTERVAL_MS) {
         lastFrameTime = now - (delta % FRAME_INTERVAL_MS);
         const elapsedTimeSec = (now - startTime) * 0.001;
-        updateDimensions();
 
         if (isUsingFallback2D) {
           renderFallback2D(elapsedTimeSec);
