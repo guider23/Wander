@@ -381,10 +381,16 @@ export const GalaxyCanvas: React.FC<GalaxyCanvasProps> = ({
     };
 
     const updateDimensions = () => {
-      const rect = canvas.getBoundingClientRect();
+      // Use window.innerWidth/innerHeight or clientWidth.
+      // Must NOT use getBoundingClientRect() because CSS transforms (such as appleGenieExpand)
+      // scale and skew the bounding box, which causes the canvas buffer to shrink and appear
+      // zoomed in and blurry until the transform ends.
+      const parent = canvas.parentElement;
+      const width = window.innerWidth || canvas.clientWidth || (parent ? parent.clientWidth : 0) || 1;
+      const height = window.innerHeight || canvas.clientHeight || (parent ? parent.clientHeight : 0) || 1;
       const dpr = 1.0;
-      const targetWidth = Math.max(1, Math.floor(rect.width * dpr));
-      const targetHeight = Math.max(1, Math.floor(rect.height * dpr));
+      const targetWidth = Math.max(1, Math.floor(width * dpr));
+      const targetHeight = Math.max(1, Math.floor(height * dpr));
 
       if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
         canvas.width = targetWidth;
@@ -492,6 +498,7 @@ export const GalaxyCanvas: React.FC<GalaxyCanvasProps> = ({
 
     const startLoop = () => {
       if (animationFrameId === null && activeRef.current && !document.hidden && !isContextLost) {
+        updateDimensions();
         lastFrameTime = performance.now();
         animationFrameId = requestAnimationFrame(tick);
       }

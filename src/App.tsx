@@ -153,9 +153,12 @@ export const App: React.FC = () => {
     const unsubChanged = api.window.onDockChanged((docked) => {
       setIsDocked(docked);
       setIsCollapsing(false);
-      // When expanding from dock, trigger node centering
+      // When expanding from dock, trigger node centering and dispatch resize when animation settles
       if (!docked) {
         setExpandTrigger(prev => prev + 1);
+        setTimeout(() => {
+          window.dispatchEvent(new Event('resize'));
+        }, 340);
       }
     });
     const unsubStart = api.window.onDockStart(() => {
